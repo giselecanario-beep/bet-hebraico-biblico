@@ -1,0 +1,163 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BET | Hebraico Bíblico</title>
+<style>
+:root {
+  --vinho:#751f32;
+  --creme:#f7f1e7;
+  --texto:#292321;
+}
+* {box-sizing:border-box}
+body {
+  margin:0;
+  background:var(--creme);
+  color:var(--texto);
+  font-family:Georgia,serif;
+}
+header {
+  background:var(--vinho);
+  color:white;
+  padding:30px 22px;
+  text-align:center;
+}
+.marca {font-size:45px;letter-spacing:5px}
+.subtitulo {font-size:15px;letter-spacing:2px}
+main {max-width:650px;margin:auto;padding:24px 18px}
+h2 {color:var(--vinho);font-size:25px}
+p {line-height:1.65}
+.card {
+  background:#fffdf9;
+  border:1px solid #e4d8c9;
+  border-radius:9px;
+  padding:20px;
+  margin:18px 0;
+}
+button {
+  background:var(--vinho);
+  color:white;
+  border:0;
+  border-radius:5px;
+  padding:13px 20px;
+  font-size:16px;
+  cursor:pointer;
+}
+button:focus-visible {outline:3px solid #b98a43}
+.grade {
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:9px;
+}
+.letra {
+  background:white;
+  border:1px solid #dbc9bc;
+  border-radius:7px;
+  padding:13px 4px;
+  text-align:center;
+  cursor:pointer;
+}
+.hebraico {
+  font-family:serif;
+  font-size:35px;
+  direction:rtl;
+}
+.nome {font-size:13px;margin-top:6px}
+#detalhe {min-height:45px;line-height:1.6}
+.opcao {
+  display:block;
+  width:100%;
+  margin:9px 0;
+  text-align:left;
+}
+footer {
+  text-align:center;
+  padding:28px;
+  font-size:13px;
+  color:#76665e;
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="marca">BET</div>
+  <div class="subtitulo">HEBRAICO BÍBLICO</div>
+</header>
+<main>
+<section>
+  <h2>Bem-vindo ao BET</h2>
+  <p>Uma jornada pela língua dos textos bíblicos. Aprenda o alfabeto, descubra palavras e avance no seu ritmo.</p>
+  <button onclick="document.getElementById('alfabeto').scrollIntoView({behavior:'smooth'})">Começar a aprender</button>
+</section>
+
+<section id="alfabeto">
+  <h2>O alfabeto hebraico</h2>
+  <p>Conheça as 22 letras. Toque em cada uma para descobrir seu nome e sua transliteração aproximada.</p>
+  <div class="grade" id="grade"></div>
+  <div class="card" id="detalhe" aria-live="polite">Escolha uma letra para começar.</div>
+</section>
+
+<section>
+  <h2>Lição 1 | A letra Alef</h2>
+  <div class="card">
+    <div class="hebraico">א</div>
+    <p><strong>Nome:</strong> Alef</p>
+    <p>A primeira letra do alfabeto hebraico é o Alef. No hebraico bíblico, ela representa uma consoante que pode funcionar como suporte para uma vogal.</p>
+    <p>O hebraico é escrito da direita para a esquerda. Aprender essa direção é um dos primeiros passos para ler os textos bíblicos.</p>
+  </div>
+</section>
+
+<section>
+  <h2>Vamos praticar?</h2>
+  <p>Qual destas letras é o Alef?</p>
+  <button class="opcao" onclick="responder(false)">ב Bet</button>
+  <button class="opcao" onclick="responder(true)">א Alef</button>
+  <button class="opcao" onclick="responder(false)">ג Guímel</button>
+  <div id="resultado" role="status" aria-live="polite"></div>
+</section>
+</main>
+<footer>BET | Hebraico Bíblico</footer>
+<script>
+const letras=[
+["א","Alef","ʾ"],
+["ב","Bet","b / v"],
+["ג","Guímel","g"],
+["ד","Dálet","d"],
+["ה","He","h"],
+["ו","Vav","w / v"],
+["ז","Záin","z"],
+["ח","Het","ḥ"],
+["ט","Tet","ṭ"],
+["י","Yod","y"],
+["כ","Kaf","k / kh"],
+["ל","Lámed","l"],
+["מ","Mem","m"],
+["נ","Nun","n"],
+["ס","Sámech","s"],
+["ע","Áyin","ʿ"],
+["פ","Pe","p / f"],
+["צ","Tsádi","ṣ"],
+["ק","Qof","q"],
+["ר","Resh","r"],
+["ש","Shin","sh / s"],
+["ת","Tav","t"]
+];
+const grade=document.getElementById("grade");
+letras.forEach(([s,n,t])=>{
+ const b=document.createElement("button");
+ b.className="letra";
+ b.innerHTML='<div class="hebraico">'+s+'</div><div class="nome">'+n+'</div>';
+ b.onclick=()=>{
+ document.getElementById("detalhe").textContent=n+" | Transliteração aproximada: "+t;
+ };
+ grade.appendChild(b);
+});
+function responder(correta){
+ document.getElementById("resultado").textContent=
+ correta?"Muito bem! Você reconheceu o Alef.":"Tente novamente. Observe a primeira letra do alfabeto.";
+}
+</script>
+</body>
+</html>
