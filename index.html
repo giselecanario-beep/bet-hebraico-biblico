@@ -250,7 +250,7 @@ document.getElementById("btn-recuperar")?.addEventListener("click", async () => 
 </main><footer>BET | Hebraico Bíblico · Versão 2.0 · Da primeira letra à leitura bíblica.</footer>
 <script>
 const letters=[['א','Alef','ʾ','Oclusão glotal; muitas vezes não se ouve como consoante.'],['ב','Bet','b / v','Com ponto interno (בּ), b; sem ponto, v na pronúncia moderna.'],['ג','Guímel','g','Som de g em gato.'],['ד','Dálet','d','Som de d.'],['ה','He','h','Som aspirado, semelhante ao h do inglês.'],['ו','Vav','v / w','Tradicionalmente w; no hebraico moderno, v. Também pode indicar vogal.'],['ז','Záin','z','Som de z.'],['ח','Het','ḥ','Som gutural, sem equivalente exato em português.'],['ט','Tet','ṭ','Som aproximado de t.'],['י','Yod','y','Som de i semivogal, como em iate.'],['כ','Kaf','k / kh','Com ponto (כּ), k; sem ponto, fricativa gutural.'],['ל','Lámed','l','Som de l.'],['מ','Mem','m','Som de m.'],['נ','Nun','n','Som de n.'],['ס','Sámech','s','Som de s.'],['ע','Áyin','ʿ','Consoante gutural, sem equivalente exato em português.'],['פ','Pe','p / f','Com ponto (פּ), p; sem ponto, f.'],['צ','Tsádi','ṣ','Som aproximado de ts.'],['ק','Qof','q','Som aproximado de k, historicamente mais posterior.'],['ר','Resh','r','Som de r, com variação histórica de pronúncia.'],['ש','Shin / Sin','sh / s','Com ponto à direita (שׁ), sh; à esquerda (שׂ), s.'],['ת','Tav','t','Som de t.']];
-const lessons=[{title:'Alef e Bet',subtitle:'As duas primeiras letras',body:`<p>O hebraico é escrito <strong>da direita para a esquerda</strong>. Vamos conhecer duas letras:</p><div class="big-hebrew">א ב</div><p><strong>א Alef</strong> representa historicamente uma consoante glotal. <strong>ב Bet</strong> pode representar os sons b ou v, dependendo de um sinal chamado dagesh. Quando a letra tem um pontinho no centro (בּ), seu som é b. Sem o pontinho (ב), costuma ter som de v na leitura que aprenderemos..</p><p>Observe a palavra:</p><div class="hebrew-word" lang="he" dir="rtl">אָב</div><p><strong>Av</strong> significa “pai”. Na escrita hebraica, o Alef aparece à direita e o Bet à esquerda.</p>`},{title:'Guímel e Dálet',subtitle:'Mais duas letras',body:`<div class="big-hebrew">ג ד</div><p><strong>ג Guímel</strong> tem som de g, como em “gato”. <strong>ד Dálet</strong> tem som de d.</p><p>Observe a palavra:</p><div class="hebrew-word" lang="he" dir="rtl">דָּג</div><p><strong>Dag</strong> significa “peixe”. Leia começando pela direita: Dálet, depois Guímel.</p>
+const lessons=[{title:'Alef e Bet',subtitle:'As duas primeiras letras',body:`<p>O hebraico é escrito <strong>da direita para a esquerda</strong>. Vamos conhecer duas letras:</p><div class="big-hebrew">א ב</div><p><strong>א Alef</strong> representa historicamente uma consoante glotal. <strong>ב Bet</strong> pode representar os sons b ou v, dependendo de um sinal chamado dagesh. Quando a letra tem um pontinho no centro (בּ), seu som é b. Sem o pontinho (ב), costuma ter som de v na leitura que aprenderemos.</p><p>Observe a palavra:</p><div class="hebrew-word" lang="he" dir="rtl">אָב</div><p><strong>Av</strong> significa “pai”. Na escrita hebraica, o Alef aparece à direita e o Bet à esquerda.</p>`},{title:'Guímel e Dálet',subtitle:'Mais duas letras',body:`<div class="big-hebrew">ג ד</div><p><strong>ג Guímel</strong> tem som de g, como em “gato”. <strong>ד Dálet</strong> tem som de d.</p><p>Observe a palavra:</p><div class="hebrew-word" lang="he" dir="rtl">דָּג</div><p><strong>Dag</strong> significa “peixe”. Leia começando pela direita: Dálet, depois Guímel.</p>
 <section class="panel" aria-labelledby="dagQuestion">
   <h3 id="dagQuestion">Na palavra <bdi lang="he" dir="rtl">דָּג</bdi> (dag, peixe), qual letra lemos primeiro?</h3>
   <div class="choices" role="group" aria-labelledby="dagQuestion">
@@ -271,7 +271,40 @@ const lessons=[{title:'Alef e Bet',subtitle:'As duas primeiras letras',body:`<p>
   <div class="feedback" id="heVavFeedback" role="status"></div>
 </section>`},{title:'As primeiras palavras',subtitle:'Ler com atenção',body:`<p>Leia da direita para a esquerda e observe os sinais vocálicos:</p><div class="hebrew-word" lang="he" dir="rtl">אָב · דָּג · שָׁלוֹם</div><p><strong>Av:</strong> pai. <strong>Dag:</strong> peixe. <strong>Shalom:</strong> paz, bem-estar, integridade.</p><p>As palavras aparecem com sinais vocálicos para apoiar a leitura inicial.</p>
 <h3>Reconheça as palavras</h3>
-${wordRecognitionActivities()}`}];
+${wordRecognitionActivities()}`},{
+  title:'Záin e Het',
+  subtitle:'O som de z e uma consoante gutural',
+  body:`
+    <p>Você já conhece as letras Alef, Bet, Guímel, Dálet, He e Vav. Agora vamos aprender mais duas consoantes.</p>
+    <div class="big-hebrew" lang="he" dir="rtl">ז ח</div>
+    <p><strong>ז Záin</strong> representa um som próximo ao <strong>z</strong> de “zebra”.</p>
+    <p><strong>ח Het</strong> é uma consoante gutural. Na tradição de leitura israelense moderna, costuma soar como um <strong>kh</strong> produzido na parte posterior da boca. Sua articulação histórica era diferente, e não há equivalência exata em português.</p>
+    <div class="panel">
+      <h3>Observe duas palavras</h3>
+      <div class="hebrew-word" lang="he" dir="rtl">זֶה</div>
+      <p><strong>Zeh</strong> significa “este” ou “isto”, dependendo do contexto. Comece a ler pela letra ז, à direita.</p>
+      <div class="hebrew-word" lang="he" dir="rtl">חַי</div>
+      <p><strong>Chai</strong> significa “vivo”. A primeira letra é ח (Het), à direita. Aqui “ch” representa uma aproximação da consoante gutural, não o som de “chuva”.</p>
+      <p class="small">Os sinais de vogais aparecem para ajudar a leitura. Vamos estudá-los com mais detalhes nas próximas aulas.</p>
+    </div>
+    <section class="panel" data-zain-het-question="z" aria-labelledby="pergunta-zain">
+      <h3 id="pergunta-zain">Qual destas letras representa o som de z?</h3>
+      <div class="choices" role="group" aria-labelledby="pergunta-zain">
+        <button type="button" class="choice" lang="he" style="font-size:32px;text-align:center" aria-label="Záin" onclick="answerZainHet(this, true)">ז</button>
+        <button type="button" class="choice" lang="he" style="font-size:32px;text-align:center" aria-label="Het" onclick="answerZainHet(this, false)">ח</button>
+      </div>
+      <div class="feedback" role="status" aria-live="polite"></div>
+    </section>
+    <section class="panel" data-zain-het-question="h" aria-labelledby="pergunta-het">
+      <h3 id="pergunta-het">Qual é a consoante gutural: He ou Het?</h3>
+      <div class="choices" role="group" aria-labelledby="pergunta-het">
+        <button type="button" class="choice" lang="he" style="font-size:32px;text-align:center" aria-label="He" onclick="answerZainHet(this, false)">ה</button>
+        <button type="button" class="choice" lang="he" style="font-size:32px;text-align:center" aria-label="Het" onclick="answerZainHet(this, true)">ח</button>
+      </div>
+      <div class="feedback" role="status" aria-live="polite"></div>
+    </section>
+  `
+}];
 
 lessons[0].body += `
 <div class="panel" style="margin-top:24px">
@@ -391,6 +424,23 @@ function answerWordRecognition(button){
   activity.querySelector('.feedback').textContent = correct
     ? `Isso mesmo! ${word} significa “${meaning}”.`
     : `Tente de novo! Releia as opções da direita para a esquerda e procure a palavra que significa “${meaning}”.`;
+}
+function answerZainHet(button, correct) {
+  const activity = button.closest('[data-zain-het-question]');
+  if (!activity) return;
+  activity.querySelectorAll('.choice').forEach(choice => {
+    choice.classList.remove('correct', 'wrong');
+  });
+  button.classList.add(correct ? 'correct' : 'wrong');
+  const type = activity.dataset.zainHetQuestion;
+  const message = type === 'z'
+    ? (correct
+      ? 'Isso mesmo! ז é Záin, com som próximo ao z de zebra.'
+      : 'Tente de novo! ח é Het; procure a letra que representa z.')
+    : (correct
+      ? 'Muito bem! ח é Het, uma consoante gutural. ה é He, com som aspirado mais suave.'
+      : 'Tente de novo! ה é He; a consoante gutural é ח (Het).');
+  activity.querySelector('.feedback').textContent = message;
 }
 function openLesson(i){const l=lessons[i],view=document.getElementById('lessonView');view.classList.remove('hidden');view.innerHTML=`<span class="tag">Aula ${i+1} de ${lessons.length}</span><h2>${l.title}</h2>${l.body}<button class="primary" onclick="completeLesson(${i})">${completed.includes(i)?'Revisar e continuar':'Concluir aula'}</button><button class="secondary" onclick="go('exercicios')">Praticar letras</button>`;view.scrollIntoView({behavior:'smooth',block:'start'})}
 function completeLesson(i){if(!completed.includes(i)){completed.push(i);try{
