@@ -121,6 +121,8 @@ window.carregarProgresso = async (uid) => {
       
 window.betUsuarioId = user ? user.uid : null;
 
+window.atualizarProgressoLocal?.();
+
   let statusBar = document.getElementById("usuario-conectado");
 
   if (!statusBar) {
@@ -221,6 +223,36 @@ const letters=[['א','Alef','ʾ','Oclusão glotal; muitas vezes não se ouve com
 const lessons=[{title:'Alef e Bet',subtitle:'As duas primeiras letras',body:`<p>O hebraico é escrito <strong>da direita para a esquerda</strong>. Vamos conhecer duas letras:</p><div class="big-hebrew">א ב</div><p><strong>א Alef</strong> representa historicamente uma consoante glotal. <strong>ב Bet</strong> pode representar os sons b ou v, conforme a vocalização.</p><p>Observe a palavra:</p><div class="hebrew-word" lang="he" dir="rtl">אָב</div><p><strong>Av</strong> significa “pai”. Na escrita hebraica, o Alef aparece à direita e o Bet à esquerda.</p>`},{title:'Guímel e Dálet',subtitle:'Mais duas letras',body:`<div class="big-hebrew">ג ד</div><p><strong>ג Guímel</strong> tem som de g, como em “gato”. <strong>ד Dálet</strong> tem som de d.</p><p>Observe a palavra:</p><div class="hebrew-word" lang="he" dir="rtl">דָּג</div><p><strong>Dag</strong> significa “peixe”. Leia começando pela direita: Dálet, depois Guímel.</p>`},{title:'He e Vav',subtitle:'Consoantes e sinais vocálicos',body:`<div class="big-hebrew">ה ו</div><p><strong>ה He</strong> indica um som aspirado. <strong>ו Vav</strong> é uma consoante que também pode participar da indicação de vogais.</p><p>Na leitura bíblica, os sinais colocados pelos massoretas ajudam a identificar as vogais.</p>`},{title:'As primeiras palavras',subtitle:'Ler com atenção',body:`<p>Leia da direita para a esquerda e observe os sinais vocálicos:</p><div class="hebrew-word" lang="he" dir="rtl">אָב · דָּג · שָׁלוֹם</div><p><strong>Av:</strong> pai. <strong>Dag:</strong> peixe. <strong>Shalom:</strong> paz, bem-estar, integridade.</p><p>As palavras aparecem com sinais vocálicos para apoiar a leitura inicial.</p>`}];
 const key='bet-hebraico-progresso-v1';let completed=[];try{const stored=JSON.parse(localStorage.getItem(key)||'[]');completed=Array.isArray(stored)?stored.filter(x=>Number.isInteger(x)&&x>=0&&x<lessons.length):[]}catch(e){};
 function go(page){document.querySelectorAll('.page').forEach(x=>x.classList.toggle('hidden',x.id!==page));document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('active',x.dataset.page===page));window.scrollTo({top:0,behavior:'smooth'});if(page==='exercicios')startQuiz()}
+  
+function chaveProgresso() {
+  return window.betUsuarioId
+    ? `bet-hebraico-progresso-${window.betUsuarioId}`
+    : key;
+}
+
+function atualizarProgressoLocal() {
+  let aulas = [];
+  try {
+    aulas = JSON.parse(
+      localStorage.getItem(chaveProgresso()) || "[]"
+    );
+  } catch (erro) {
+    aulas = [];
+  }
+
+  completed = Array.isArray(aulas)
+    ? [...new Set(aulas.filter(i =>
+        Number.isInteger(i) &&
+        i >= 0 &&
+        i < lessons.length
+      ))]
+    : [];
+
+  renderLessons();
+}
+
+window.atualizarProgressoLocal = atualizarProgressoLocal;
+
 document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()=>go(b.dataset.page)));
 const grid=document.getElementById('letterGrid');letters.forEach((l,i)=>{const b=document.createElement('button');b.className='letter';b.innerHTML=`<span class="glyph" lang="he" dir="rtl">${l[0]}</span><span>${l[1]}</span>`;b.onclick=()=>{const d=document.getElementById('letterDetail');d.classList.remove('hidden');d.innerHTML=`<div class="big-hebrew" lang="he">${l[0]}</div><h2>${l[1]}</h2><p><strong>Transliteração:</strong> ${l[2]}</p><p>${l[3]}</p>`;d.scrollIntoView({behavior:'smooth',block:'nearest'})};grid.appendChild(b)});
 function renderLessons(){document.getElementById('lessonList').innerHTML=lessons.map((l,i)=>`<button class="lesson" onclick="openLesson(${i})"><strong>${completed.includes(i)?'✓ ':''}Aula ${i+1}: ${l.title}</strong><span>${l.subtitle}${completed.includes(i)?' · Concluída':''}</span></button>`).join('');document.getElementById('progressText').textContent=`${completed.length} de ${lessons.length} aulas introdutórias concluídas.`;document.getElementById('progressBar').style.width=(completed.length/lessons.length*100)+'%'}
