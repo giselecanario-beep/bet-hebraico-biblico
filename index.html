@@ -39,5 +39,16 @@ let quiz=[],qIndex=0,score=0,answered=false;function startQuiz(){quiz=[...letter
 function showQuestion(){answered=false;document.getElementById('quizNext').classList.add('hidden');document.getElementById('quizFeedback').textContent='';if(qIndex>=quiz.length){document.getElementById('quizCount').textContent='Resultado';document.getElementById('quizGlyph').textContent='✓';document.getElementById('quizQuestion').textContent=`Você acertou ${score} de ${quiz.length} perguntas.`;document.getElementById('quizChoices').innerHTML='';document.getElementById('quizNext').textContent='Tentar novamente';document.getElementById('quizNext').onclick=startQuiz;document.getElementById('quizNext').classList.remove('hidden');return}document.getElementById('quizNext').textContent='Próxima pergunta';document.getElementById('quizNext').onclick=nextQuestion;const i=quiz[qIndex];document.getElementById('quizCount').textContent=`Pergunta ${qIndex+1} de ${quiz.length}`;document.getElementById('quizGlyph').textContent=letters[i][0];document.getElementById('quizQuestion').textContent='Qual é o nome desta letra?';const options=[i,...letters.map((_,n)=>n).filter(n=>n!==i).sort(()=>Math.random()-.5).slice(0,3)].sort(()=>Math.random()-.5);document.getElementById('quizChoices').innerHTML='';options.forEach(n=>{const b=document.createElement('button');b.className='choice';b.textContent=letters[n][1];b.onclick=()=>answer(n,i);document.getElementById('quizChoices').appendChild(b)})}
 function answer(chosen,correct){if(answered)return;answered=true;if(chosen===correct)score++;document.querySelectorAll('.choice').forEach(b=>{b.disabled=true;if(b.textContent===letters[correct][1])b.classList.add('correct');else if(b.textContent===letters[chosen][1])b.classList.add('wrong')});document.getElementById('quizFeedback').textContent=chosen===correct?'Muito bem! Resposta correta.':`A resposta correta é ${letters[correct][1]}.`;document.getElementById('quizNext').classList.remove('hidden')}
 function nextQuestion(){qIndex++;showQuestion()}renderLessons();
-</script>
+</script><div style="text-align:center; padding:25px;">
+  <h2>Continue aprendendo com o BET</h2>
+  <p>7 dias grátis e depois R$ 19,90 por mês.</p>
+  <a href="https://mpago.la/1D3vZWm"
+     target="_blank"
+     rel="noopener noreferrer"
+     style="display:inline-block;background:#751f32;
+     color:white;padding:14px 24px;
+     border-radius:8px;text-decoration:none;">
+    Assinar BET Completo
+  </a>
+</div>
 </body></html>
