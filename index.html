@@ -258,7 +258,18 @@ const lessons=[{title:'Alef e Bet',subtitle:'As duas primeiras letras',body:`<p>
     <button type="button" class="choice" lang="he" onclick="answerDag(this, true)">ד</button>
   </div>
   <div class="feedback" id="dagFeedback" role="status"></div>
-</section>`},{title:'He e Vav',subtitle:'Consoantes e sinais vocálicos',body:`<div class="big-hebrew">ה ו</div><p><strong>ה He</strong> indica um som aspirado. <strong>ו Vav</strong> é uma consoante que também pode participar da indicação de vogais.</p><p>Na leitura bíblica, os sinais colocados pelos massoretas ajudam a identificar as vogais.</p>`},{title:'As primeiras palavras',subtitle:'Ler com atenção',body:`<p>Leia da direita para a esquerda e observe os sinais vocálicos:</p><div class="hebrew-word" lang="he" dir="rtl">אָב · דָּג · שָׁלוֹם</div><p><strong>Av:</strong> pai. <strong>Dag:</strong> peixe. <strong>Shalom:</strong> paz, bem-estar, integridade.</p><p>As palavras aparecem com sinais vocálicos para apoiar a leitura inicial.</p>`}];
+</section>`},{title:'He e Vav',subtitle:'Consoantes e sinais vocálicos',body:`<div class="big-hebrew" lang="he" dir="rtl">ה ו</div>
+<p><strong><bdi lang="he">ה</bdi> He</strong> representa o som de <strong>h aspirado</strong>, como o h da palavra inglesa <em lang="en">hello</em>.</p>
+<p><strong><bdi lang="he">ו</bdi> Vav</strong> tinha historicamente o som de <strong>w</strong>, como no início da palavra inglesa <em lang="en">water</em>. Na escrita hebraica, Vav também pode ajudar a indicar vogais, como <strong>o</strong> e <strong>u</strong>.</p>
+<p>Na leitura bíblica, os sinais colocados pelos massoretas ajudam a identificar as vogais.</p>
+<section class="panel" aria-labelledby="heVavQuestion">
+  <h3 id="heVavQuestion">Qual dessas letras representa o som de h aspirado?</h3>
+  <div class="choices" role="group" aria-labelledby="heVavQuestion">
+    <button type="button" class="choice" lang="he" onclick="answerHeVav(this, true)">ה</button>
+    <button type="button" class="choice" lang="he" onclick="answerHeVav(this, false)">ו</button>
+  </div>
+  <div class="feedback" id="heVavFeedback" role="status"></div>
+</section>`},{title:'As primeiras palavras',subtitle:'Ler com atenção',body:`<p>Leia da direita para a esquerda e observe os sinais vocálicos:</p><div class="hebrew-word" lang="he" dir="rtl">אָב · דָּג · שָׁלוֹם</div><p><strong>Av:</strong> pai. <strong>Dag:</strong> peixe. <strong>Shalom:</strong> paz, bem-estar, integridade.</p><p>As palavras aparecem com sinais vocálicos para apoiar a leitura inicial.</p>`}];
 
 lessons[0].body += `
 <div class="panel" style="margin-top:24px">
@@ -340,6 +351,15 @@ function answerDag(button, correct){
   document.getElementById('dagFeedback').textContent = correct
     ? 'Isso mesmo! Lemos da direita para a esquerda. Dálet (ד) está à direita e vem antes de Guímel (ג).'
     : 'Tente de novo! Guímel (ג) está à esquerda. Em hebraico, começamos pela letra que está mais à direita.';
+}
+function answerHeVav(button, correct){
+  button.parentElement.querySelectorAll('.choice').forEach(choice => {
+    choice.classList.remove('correct', 'wrong');
+  });
+  button.classList.add(correct ? 'correct' : 'wrong');
+  document.getElementById('heVavFeedback').textContent = correct
+    ? 'Isso mesmo! He (ה) representa o h aspirado, como no começo de “hello”.'
+    : 'Tente de novo! Vav (ו) tinha historicamente o som de w e também pode ajudar a indicar vogais.';
 }
 function openLesson(i){const l=lessons[i],view=document.getElementById('lessonView');view.classList.remove('hidden');view.innerHTML=`<span class="tag">Aula ${i+1} de ${lessons.length}</span><h2>${l.title}</h2>${l.body}<button class="primary" onclick="completeLesson(${i})">${completed.includes(i)?'Revisar e continuar':'Concluir aula'}</button><button class="secondary" onclick="go('exercicios')">Praticar letras</button>`;view.scrollIntoView({behavior:'smooth',block:'start'})}
 function completeLesson(i){if(!completed.includes(i)){completed.push(i);try{
