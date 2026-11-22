@@ -34,6 +34,9 @@
   const app = initializeApp(firebaseConfig);
   const analytics = getAnalytics(app);
     const auth = getAuth(app);
+    onAuthStateChanged(auth, (user) => {
+  console.log(user ? "Usuário conectado" : "Nenhum usuário conectado");
+});
 </script>
   <header><div class="brand">BET</div><div class="sub">HEBRAICO BÍBLICO</div></header>
 <nav aria-label="Navegação"><button data-page="inicio" class="active">Início</button><button data-page="alfabeto">Alfabeto</button><button data-page="aulas">Aulas</button><button data-page="exercicios">Exercícios</button><button data-page="trilhas">Trilhas</button><button data-page="laboratorio">Laboratório</button></nav>
