@@ -631,7 +631,7 @@ function answerZainHet(button, correct) {
   activity.querySelector('.feedback').textContent = message;
 }
 
-/* Tutora IA · Gisele: conversa guiada demonstrativa; sem API e sem gravação de perguntas. */
+/* IA Gisele: conversa guiada demonstrativa; sem API e sem gravação de perguntas. */
 const tutorLessons=[
  {name:'Alef e Bet',questions:[
   {q:'Por que lemos da direita para a esquerda?',keys:['direita','esquerda','sentido','direcao'],a:'Porque a escrita hebraica segue, por convenção histórica, da direita para a esquerda. A ordem das letras de uma palavra também acompanha esse sentido.'},
@@ -668,7 +668,7 @@ function tutorPanel(index){
  if(!tutorLessons[index])return '';
  return '<section class="panel tutor-panel" id="lessonTutor" aria-labelledby="tutorHeading">'+
    '<div class="tutor-header"><div class="tutor-mark" aria-hidden="true">G</div><div>'+
-   '<h3 id="tutorHeading" class="tutor-heading">Tutora IA · Gisele</h3>'+
+   '<h3 id="tutorHeading" class="tutor-heading">IA Gisele</h3>'+
    '<div class="tutor-kicker">Converse durante a aula · experiência guiada</div></div></div>'+
    '<p class="tutor-caption">Protótipo com respostas preparadas para esta aula. Ainda não é uma conversa livre com inteligência artificial nem usa a voz clonada da professora.</p>'+
    '<div id="tutorChat" class="tutor-chat" role="log" aria-live="polite" aria-relevant="additions" aria-label="Conversa com a tutora"></div>'+
@@ -696,7 +696,7 @@ function initTutor(index){
  const quick=document.getElementById('tutorQuick');
  if(!guide||!quick)return;
  quick.innerHTML='';
- tutorAddBubble('Shalom! Sou a tutora virtual do BET. Vamos conversar sobre '+guide.name+'? Escolha uma pergunta ou escreva sua dúvida.','tutor');
+ tutorAddBubble('Shalom! Eu sou a IA Gisele, sua tutora do BET. Vamos conversar sobre '+guide.name+'? Escolha uma pergunta ou escreva sua dúvida.','tutor');
  guide.questions.forEach((q,i)=>{
    const btn=document.createElement('button');
    btn.type='button';
