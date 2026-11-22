@@ -269,7 +269,9 @@ const lessons=[{title:'Alef e Bet',subtitle:'As duas primeiras letras',body:`<p>
     <button type="button" class="choice" lang="he" onclick="answerHeVav(this, false)">ו</button>
   </div>
   <div class="feedback" id="heVavFeedback" role="status"></div>
-</section>`},{title:'As primeiras palavras',subtitle:'Ler com atenção',body:`<p>Leia da direita para a esquerda e observe os sinais vocálicos:</p><div class="hebrew-word" lang="he" dir="rtl">אָב · דָּג · שָׁלוֹם</div><p><strong>Av:</strong> pai. <strong>Dag:</strong> peixe. <strong>Shalom:</strong> paz, bem-estar, integridade.</p><p>As palavras aparecem com sinais vocálicos para apoiar a leitura inicial.</p>`}];
+</section>`},{title:'As primeiras palavras',subtitle:'Ler com atenção',body:`<p>Leia da direita para a esquerda e observe os sinais vocálicos:</p><div class="hebrew-word" lang="he" dir="rtl">אָב · דָּג · שָׁלוֹם</div><p><strong>Av:</strong> pai. <strong>Dag:</strong> peixe. <strong>Shalom:</strong> paz, bem-estar, integridade.</p><p>As palavras aparecem com sinais vocálicos para apoiar a leitura inicial.</p>
+<h3>Reconheça as palavras</h3>
+${wordRecognitionActivities()}`}];
 
 lessons[0].body += `
 <div class="panel" style="margin-top:24px">
@@ -360,6 +362,35 @@ function answerHeVav(button, correct){
   document.getElementById('heVavFeedback').textContent = correct
     ? 'Isso mesmo! He (ה) representa o h aspirado, como no começo de “hello”.'
     : 'Tente de novo! Vav (ו) tinha historicamente o som de w e também pode ajudar a indicar vogais.';
+}
+function wordRecognitionActivities(){
+  const words = [['אָב', 'pai'], ['דָּג', 'peixe'], ['שָׁלוֹם', 'paz']];
+  const options = ['דָּג', 'שָׁלוֹם', 'אָב'];
+  const choices = options.map(option =>
+    `<button type="button" class="choice" onclick="answerWordRecognition(this)"><bdi lang="he" dir="rtl">${option}</bdi></button>`
+  ).join('');
+  return words.map(([word, meaning], index) => {
+    const questionId = 'wordRecognitionQuestion' + index;
+    return `<section class="panel" aria-labelledby="${questionId}" data-word="${word}" data-meaning="${meaning}">
+      <h4 id="${questionId}">Qual palavra significa “${meaning}”?</h4>
+      <div class="choices" role="group" aria-labelledby="${questionId}">${choices}</div>
+      <div class="feedback" role="status"></div>
+    </section>`;
+  }).join('');
+}
+
+function answerWordRecognition(button){
+  const choices = button.parentElement;
+  const activity = choices.parentElement;
+  const {word, meaning} = activity.dataset;
+  const correct = button.textContent === word;
+  choices.querySelectorAll('.choice').forEach(choice => {
+    choice.classList.remove('correct', 'wrong');
+  });
+  button.classList.add(correct ? 'correct' : 'wrong');
+  activity.querySelector('.feedback').textContent = correct
+    ? `Isso mesmo! ${word} significa “${meaning}”.`
+    : `Tente de novo! Releia as opções da direita para a esquerda e procure a palavra que significa “${meaning}”.`;
 }
 function openLesson(i){const l=lessons[i],view=document.getElementById('lessonView');view.classList.remove('hidden');view.innerHTML=`<span class="tag">Aula ${i+1} de ${lessons.length}</span><h2>${l.title}</h2>${l.body}<button class="primary" onclick="completeLesson(${i})">${completed.includes(i)?'Revisar e continuar':'Concluir aula'}</button><button class="secondary" onclick="go('exercicios')">Praticar letras</button>`;view.scrollIntoView({behavior:'smooth',block:'start'})}
 function completeLesson(i){if(!completed.includes(i)){completed.push(i);try{
