@@ -161,9 +161,18 @@ document.getElementById("btnEntrar").addEventListener("click", async () => {
   }
 });
 document.getElementById("btn-recuperar")?.addEventListener("click", async () => {
-  const email = document.getElementById("email").value.trim();
- const mensagem = document.getElementById("mensagemLogin") || (() => {
-    const p = document.createElement("p");
+  const email = document.getElementById("email")?.value.trim() || "";
+  if (!email) {
+    alert("Digite o seu e-mail no campo acima para recuperar a senha.");
+    return;
+  }
+  try {
+    await sendPasswordResetEmail(auth, email);
+    alert("E-mail de recuperação enviado. Verifique a caixa de entrada e o spam.");
+  } catch (erro) {
+    alert("Erro: " + (erro?.code || erro?.message || "desconhecido"));
+  }
+});
     p.id = "mensagemLogin";
     p.style.cssText = "margin-top:8px;color:#751f32;font-family:Georgia,serif;";
     document.getElementById("btn-recuperar")?.insertAdjacentElement("afterend", p);
