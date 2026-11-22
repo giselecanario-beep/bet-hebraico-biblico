@@ -94,7 +94,29 @@
   const analytics = getAnalytics(app);
     const auth = getAuth(app);
     onAuthStateChanged(auth, (user) => {
-  console.log(user ? "Usuário conectado" : "Nenhum usuário conectado");
+  const areaLogin = document.getElementById("login-area");
+  let statusBar = document.getElementById("usuario-conectado");
+
+  if (!statusBar) {
+    statusBar = document.createElement("div");
+    statusBar.id = "usuario-conectado";
+    statusBar.style.cssText = "max-width:520px;margin:16px auto;padding:14px 20px;background:#f7f1e7;border:1px solid #dfd3c3;border-radius:8px;display:flex;justify-content:space-between;align-items:center;gap:12px;font-family:Georgia,serif;color:#751f32;";
+    areaLogin.parentNode.insertBefore(statusBar, areaLogin);
+  }
+
+  if (user) {
+    statusBar.innerHTML = `<span>Conectado como: <strong>${user.email}</strong></span><button id="btn-sair" style="padding:8px 14px;background:#751f32;color:#fff;border:none;border-radius:5px;cursor:pointer;font-family:Georgia,serif;">Sair</button>`;
+    statusBar.style.display = "flex";
+    if (areaLogin) areaLogin.style.display = "none";
+
+    document.getElementById("btn-sair").addEventListener("click", async () => {
+      await signOut(auth);
+    });
+  } else {
+    statusBar.style.display = "none";
+    statusBar.innerHTML = "";
+    if (areaLogin) areaLogin.style.display = "flex";
+  }
 });
     
 document.getElementById("btnCadastrar").addEventListener("click", async () => {
