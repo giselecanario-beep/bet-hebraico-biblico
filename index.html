@@ -89,6 +89,14 @@
 .audio-status{min-height:22px;font:600 14px/1.5 Arial,sans-serif;color:var(--wine)}
 @media(max-width:560px){.audio-items{grid-template-columns:repeat(2,minmax(0,1fr))}.audio-hebrew{font-size:38px}}
 
+
+.listening-practice{scroll-margin-top:78px}
+.listening-controls{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.listening-controls .primary{margin:8px 0}
+.listening-choices{grid-template-columns:repeat(3,minmax(0,1fr))}
+.listening-choices .choice{text-align:center;font:clamp(30px,7vw,43px)/1.6 'Times New Roman',serif;min-height:78px;direction:rtl}
+.listening-choices .choice:focus-visible{outline:3px solid var(--wine);outline-offset:2px}
+@media(max-width:490px){.listening-choices{grid-template-columns:1fr}.listening-choices .choice{min-height:65px}}
 </style>
   
 </head>
@@ -250,7 +258,35 @@ document.getElementById("btn-recuperar")?.addEventListener("click", async () => 
 <section id="inicio" class="page"><h1>Bem-vindo ao BET</h1><p>Uma jornada pela língua dos textos bíblicos. Aprenda o alfabeto, descubra palavras e avance no seu ritmo.</p><button class="primary" onclick="go('aulas');openLesson(0)">Começar a aprender</button><div class="panel"><h2>Seu percurso</h2><p class="small" id="progressText">Seu progresso aparecerá aqui.</p><div class="progress"><div id="progressBar"></div></div><button class="secondary" onclick="go('aulas')">Ver as aulas</button></div><button class="secondary" onclick="go('trilhas')">Conhecer as seis trilhas</button><h2>O que você vai aprender?</h2><p>Reconhecer as 22 letras, compreender a escrita da direita para a esquerda, ler palavras bíblicas e praticar com exercícios.</p></section>
 <section id="alfabeto" class="page hidden"><h1>O alfabeto hebraico</h1><p>Conheça as 22 letras. Toque em cada uma para descobrir seu nome e uma indicação de pronúncia.</p><div class="grid" id="letterGrid"></div><div class="panel hidden" id="letterDetail" aria-live="polite"></div><p class="small">Alguns sons não têm equivalente exato no português. As transliterações são aproximações para iniciantes.</p></section>
 <section id="aulas" class="page hidden"><h1>Suas aulas</h1><p>Um caminho introdutório para começar a ler hebraico bíblico.</p><div id="lessonList"></div><article class="panel hidden" id="lessonView"></article></section>
-<section id="exercicios" class="page hidden"><h1>Vamos praticar?</h1><p>Teste o reconhecimento das letras. Cada resposta correta conta para seu resultado.</p><div class="panel"><p class="small" id="quizCount"></p><div class="big-hebrew" id="quizGlyph"></div><p id="quizQuestion"></p><div class="choices" id="quizChoices"></div><div class="feedback" id="quizFeedback" aria-live="polite"></div><button class="primary hidden" id="quizNext" onclick="nextQuestion()">Próxima pergunta</button></div></section>
+<section id="exercicios" class="page hidden">
+<h1>Vamos praticar?</h1>
+<p>Treine o alfabeto e descubra palavras bíblicas pela escuta.</p>
+<button type="button" class="secondary" onclick="document.getElementById('listeningPractice').scrollIntoView({behavior:'smooth',block:'start'})">🎧 Ir ao treino de escuta</button>
+<div class="panel">
+  <h2>Reconheça as letras</h2>
+  <p class="small" id="quizCount"></p>
+  <div class="big-hebrew" id="quizGlyph"></div>
+  <p id="quizQuestion"></p>
+  <div class="choices" id="quizChoices"></div>
+  <div class="feedback" id="quizFeedback" aria-live="polite"></div>
+  <button class="primary hidden" id="quizNext" onclick="nextQuestion()">Próxima pergunta</button>
+</div>
+<section class="panel listening-practice" id="listeningPractice" aria-labelledby="listeningTitle">
+  <h2 id="listeningTitle">🎧 Ouça e descubra</h2>
+  <p>Escute uma palavra em hebraico e escolha sua escrita correta. Você pode ouvir quantas vezes quiser.</p>
+  <p class="small" id="listeningCount">Cinco palavras para praticar.</p>
+  <div class="listening-controls">
+    <button type="button" class="primary" id="listeningPlay" onclick="playListeningWord()">🔊 Ouvir palavra</button>
+    <label class="audio-help"><input type="checkbox" id="listeningSlow" checked> Áudio mais lento</label>
+  </div>
+  <p id="listeningAudioStatus" class="audio-status" role="status" aria-live="polite"></p>
+  <p class="small" id="listeningPrompt">Qual destas palavras você ouviu?</p>
+  <div id="listeningChoices" class="choices listening-choices" role="group" aria-label="Escolha a palavra escrita em hebraico"></div>
+  <div class="feedback" id="listeningFeedback" role="status" aria-live="polite"></div>
+  <button type="button" class="primary hidden" id="listeningNext" onclick="nextListeningWord()">Próxima palavra</button>
+  <p class="audio-help">Usamos voz sintetizada em hebraico israelense moderno. A pronúncia antiga do hebraico bíblico tinha diferenças.</p>
+</section>
+</section>
 <section id="trilhas" class="page hidden"><h1>Sua jornada no hebraico bíblico</h1><p class="section-intro">Do primeiro Alef à leitura e análise de textos bíblicos. Comece gratuitamente e avance no seu ritmo.</p><div class="tracks">
 <div class="track"><span class="tag">Trilha 1 · Gratuita</span><h3>Descobrir o hebraico</h3><p>Alfabeto, direção da escrita, primeiras palavras e exercícios.</p><button class="primary" onclick="go('aulas');openLesson(0)">Começar agora</button></div>
 <div class="track locked"><span class="tag">Trilha 2 · Em preparação</span><h3>Aprender a ler</h3><p>Vogais, sílabas, leitura e vocabulário.</p><button class="secondary" disabled>Em preparação</button></div>
@@ -409,7 +445,7 @@ function speakHebrew(text,label,statusId){
   engine.cancel();
   const speech=new SpeechSynthesisUtterance(text);
   speech.lang='he-IL';
-  speech.rate=(document.getElementById('audioSlow')?.checked ?? true) ? 0.73 : 0.95;
+  speech.rate=(document.getElementById(statusId === 'listeningAudioStatus' ? 'listeningSlow' : 'audioSlow')?.checked ?? true) ? 0.73 : 0.95;
   speech.pitch=1;
   if(hebrewVoice)speech.voice=hebrewVoice;
   activeHebrewSpeech=speech;
@@ -432,7 +468,7 @@ function playAlphabetLetter(index){
 }
 
 const key='bet-hebraico-progresso-v1';let completed=[];try{const stored=JSON.parse(localStorage.getItem(key)||'[]');completed=Array.isArray(stored)?stored.filter(x=>Number.isInteger(x)&&x>=0&&x<lessons.length):[]}catch(e){};
-function go(page){document.querySelectorAll('.page').forEach(x=>x.classList.toggle('hidden',x.id!==page));document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('active',x.dataset.page===page));window.scrollTo({top:0,behavior:'smooth'});if(page==='exercicios')startQuiz()}
+function go(page){document.querySelectorAll('.page').forEach(x=>x.classList.toggle('hidden',x.id!==page));document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('active',x.dataset.page===page));window.scrollTo({top:0,behavior:'smooth'});if(page==='exercicios'){startQuiz();if(!listeningOrder.length)startListeningQuiz()}}
   
 function chaveProgresso() {
   return window.betUsuarioId
@@ -568,6 +604,106 @@ if (window.betUsuarioId) {
 }
 
 }catch(e){}}renderLessons();if(i+1<lessons.length)openLesson(i+1);else{document.getElementById('lessonView').innerHTML='<h2>Parabéns!</h2><p>Você concluiu as aulas introdutórias disponíveis. Continue praticando o alfabeto.</p><button class="primary" onclick="go(\'exercicios\')">Fazer exercícios</button>'}}
+
+/* Reconhecimento auditivo: a resposta só aparece após o aluno escolher. */
+const listeningWords=[
+  {hebrew:'אָב',spoken:'אָב',translit:'av',meaning:'pai'},
+  {hebrew:'דָּג',spoken:'דָּג',translit:'dag',meaning:'peixe'},
+  {hebrew:'שָׁלוֹם',spoken:'שָׁלוֹם',translit:'shalom',meaning:'paz, bem-estar e integridade'},
+  {hebrew:'זֶה',spoken:'זֶה',translit:'zeh',meaning:'este ou isto'},
+  {hebrew:'חַי',spoken:'חַי',translit:'chai',meaning:'vivo'}
+];
+let listeningOrder=[], listeningIndex=0, listeningScore=0;
+let listeningAnswered=false, listeningWrongAttempt=false;
+function shuffleListening(items){
+  const arr=items.slice();
+  for(let i=arr.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]]=[arr[j],arr[i]];
+  }
+  return arr;
+}
+function startListeningQuiz(){
+  if('speechSynthesis' in window)window.speechSynthesis.cancel();
+  listeningOrder=shuffleListening(listeningWords.map((_,i)=>i));
+  listeningIndex=0;
+  listeningScore=0;
+  showListeningWord();
+}
+function showListeningWord(){
+  listeningAnswered=false;
+  listeningWrongAttempt=false;
+  const status=document.getElementById('listeningAudioStatus');
+  const feedback=document.getElementById('listeningFeedback');
+  const choices=document.getElementById('listeningChoices');
+  const next=document.getElementById('listeningNext');
+  status.textContent='';
+  feedback.textContent='';
+  choices.innerHTML='';
+  next.classList.add('hidden');
+  if(listeningIndex>=listeningOrder.length){
+    document.getElementById('listeningCount').textContent='Treino concluído!';
+    document.getElementById('listeningPrompt').textContent=
+      'Você acertou '+listeningScore+' de '+listeningOrder.length+' palavras na primeira tentativa.';
+    document.getElementById('listeningPlay').classList.add('hidden');
+    next.textContent='Treinar novamente';
+    next.classList.remove('hidden');
+    return;
+  }
+  document.getElementById('listeningPlay').classList.remove('hidden');
+  document.getElementById('listeningCount').textContent='Palavra '+(listeningIndex+1)+' de '+listeningOrder.length;
+  document.getElementById('listeningPrompt').textContent='Qual destas palavras você ouviu?';
+  next.textContent='Próxima palavra';
+  const answerIndex=listeningOrder[listeningIndex];
+  const distractors=shuffleListening(listeningWords.map((_,i)=>i).filter(i=>i!==answerIndex)).slice(0,2);
+  const options=shuffleListening([answerIndex,...distractors]);
+  options.forEach(i=>{
+    const button=document.createElement('button');
+    button.type='button';
+    button.className='choice';
+    button.setAttribute('lang','he');
+    button.setAttribute('dir','rtl');
+    button.textContent=listeningWords[i].hebrew;
+    button.onclick=()=>answerListeningWord(i,button);
+    choices.appendChild(button);
+  });
+}
+function playListeningWord(){
+  if(listeningIndex>=listeningOrder.length)return;
+  const target=listeningWords[listeningOrder[listeningIndex]];
+  // O status não revela qual palavra está sendo pronunciada.
+  speakHebrew(target.spoken,'a palavra do exercício','listeningAudioStatus');
+}
+function answerListeningWord(selectedIndex,button){
+  if(listeningAnswered || listeningIndex>=listeningOrder.length)return;
+  const correctIndex=listeningOrder[listeningIndex];
+  const feedback=document.getElementById('listeningFeedback');
+  if(selectedIndex!==correctIndex){
+    listeningWrongAttempt=true;
+    button.classList.add('wrong');
+    feedback.textContent='Ainda não! Escute mais uma vez e tente outra alternativa.';
+    return;
+  }
+  listeningAnswered=true;
+  button.classList.remove('wrong');
+  button.classList.add('correct');
+  document.querySelectorAll('#listeningChoices .choice').forEach(b=>b.disabled=true);
+  if(!listeningWrongAttempt)listeningScore++;
+  const word=listeningWords[correctIndex];
+  feedback.textContent='Muito bem! '+word.hebrew+' ('+word.translit+') significa '+word.meaning+'.';
+  document.getElementById('listeningNext').classList.remove('hidden');
+}
+function nextListeningWord(){
+  if(listeningIndex>=listeningOrder.length){
+    startListeningQuiz();
+    return;
+  }
+  if(!listeningAnswered)return;
+  if('speechSynthesis' in window)window.speechSynthesis.cancel();
+  listeningIndex++;
+  showListeningWord();
+}
+
 let quiz=[],qIndex=0,score=0,answered=false;function startQuiz(){quiz=[...letters.keys()].sort(()=>Math.random()-.5).slice(0,8);qIndex=0;score=0;showQuestion()}
 function showQuestion(){answered=false;document.getElementById('quizNext').classList.add('hidden');document.getElementById('quizFeedback').textContent='';if(qIndex>=quiz.length){document.getElementById('quizCount').textContent='Resultado';document.getElementById('quizGlyph').textContent='✓';document.getElementById('quizQuestion').textContent=`Você acertou ${score} de ${quiz.length} perguntas.`;document.getElementById('quizChoices').innerHTML='';document.getElementById('quizNext').textContent='Tentar novamente';document.getElementById('quizNext').onclick=startQuiz;document.getElementById('quizNext').classList.remove('hidden');return}document.getElementById('quizNext').textContent='Próxima pergunta';document.getElementById('quizNext').onclick=nextQuestion;const i=quiz[qIndex];document.getElementById('quizCount').textContent=`Pergunta ${qIndex+1} de ${quiz.length}`;document.getElementById('quizGlyph').textContent=letters[i][0];document.getElementById('quizQuestion').textContent='Qual é o nome desta letra?';const options=[i,...letters.map((_,n)=>n).filter(n=>n!==i).sort(()=>Math.random()-.5).slice(0,3)].sort(()=>Math.random()-.5);document.getElementById('quizChoices').innerHTML='';options.forEach(n=>{const b=document.createElement('button');b.className='choice';b.textContent=letters[n][1];b.onclick=()=>answer(n,i);document.getElementById('quizChoices').appendChild(b)})}
 function answer(chosen,correct){if(answered)return;answered=true;if(chosen===correct)score++;document.querySelectorAll('.choice').forEach(b=>{b.disabled=true;if(b.textContent===letters[correct][1])b.classList.add('correct');else if(b.textContent===letters[chosen][1])b.classList.add('wrong')});document.getElementById('quizFeedback').textContent=chosen===correct?'Muito bem! Resposta correta.':`A resposta correta é ${letters[correct][1]}.`;document.getElementById('quizNext').classList.remove('hidden')}
