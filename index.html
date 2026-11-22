@@ -157,7 +157,20 @@ document.getElementById("btnEntrar").addEventListener("click", async () => {
     mensagem.textContent = "Não foi possível entrar. Confira e-mail e senha.";
   }
 });
-
+document.getElementById("btn-recuperar")?.addEventListener("click", async () => {
+  const email = document.getElementById("email").value.trim();
+  const mensagem = document.getElementById("mensagemLogin");
+  if (!email) {
+    mensagem.textContent = "Digite o seu e-mail no campo acima para recuperar a senha.";
+    return;
+  }
+  try {
+    await sendPasswordResetEmail(auth, email);
+    mensagem.textContent = "E-mail de recuperação enviado. Verifique a caixa de entrada e o spam.";
+  } catch (erro) {
+    mensagem.textContent = "Não foi possível enviar o e-mail de recuperação. Confira o endereço digitado.";
+  }
+});
 </script>
   <header><div class="brand">BET</div><div class="sub">HEBRAICO BÍBLICO</div></header>
 <nav aria-label="Navegação"><button data-page="inicio" class="active">Início</button><button data-page="alfabeto">Alfabeto</button><button data-page="aulas">Aulas</button><button data-page="exercicios">Exercícios</button><button data-page="trilhas">Trilhas</button><button data-page="laboratorio">Laboratório</button></nav>
