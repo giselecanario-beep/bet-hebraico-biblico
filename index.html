@@ -253,6 +253,30 @@ function atualizarProgressoLocal() {
 
 window.atualizarProgressoLocal = atualizarProgressoLocal;
 
+window.aplicarProgressoNuvem = (uid, aulas) => {
+  if (window.betUsuarioId !== uid) return;
+
+  const validas = Array.isArray(aulas)
+    ? aulas.filter(i =>
+        Number.isInteger(i) &&
+        i >= 0 &&
+        i < lessons.length
+      )
+    : [];
+
+  completed = [...new Set([...completed, ...validas])]
+    .sort((a, b) => a - b);
+
+  try {
+    localStorage.setItem(
+      chaveProgresso(),
+      JSON.stringify(completed)
+    );
+  } catch (erro) {}
+
+  renderLessons();
+};
+
 document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()=>go(b.dataset.page)));
 const grid=document.getElementById('letterGrid');letters.forEach((l,i)=>{const b=document.createElement('button');b.className='letter';b.innerHTML=`<span class="glyph" lang="he" dir="rtl">${l[0]}</span><span>${l[1]}</span>`;b.onclick=()=>{const d=document.getElementById('letterDetail');d.classList.remove('hidden');d.innerHTML=`<div class="big-hebrew" lang="he">${l[0]}</div><h2>${l[1]}</h2><p><strong>Transliteração:</strong> ${l[2]}</p><p>${l[3]}</p>`;d.scrollIntoView({behavior:'smooth',block:'nearest'})};grid.appendChild(b)});
 function renderLessons(){document.getElementById('lessonList').innerHTML=lessons.map((l,i)=>`<button class="lesson" onclick="openLesson(${i})"><strong>${completed.includes(i)?'✓ ':''}Aula ${i+1}: ${l.title}</strong><span>${l.subtitle}${completed.includes(i)?' · Concluída':''}</span></button>`).join('');document.getElementById('progressText').textContent=`${completed.length} de ${lessons.length} aulas introdutórias concluídas.`;document.getElementById('progressBar').style.width=(completed.length/lessons.length*100)+'%'}
