@@ -111,6 +111,9 @@ window.salvarProgresso = salvarProgresso;
 
     onAuthStateChanged(auth, (user) => {
   const areaLogin = document.getElementById("login-area");
+      
+window.betUsuarioId = user ? user.uid : null;
+
   let statusBar = document.getElementById("usuario-conectado");
 
   if (!statusBar) {
