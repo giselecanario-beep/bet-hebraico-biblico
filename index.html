@@ -9,7 +9,31 @@
 </style>
 </head>
 <body>
-<header><div class="brand">BET</div><div class="sub">HEBRAICO BÍBLICO</div></header>
+
+  <script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-analytics.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+  const firebaseConfig = {
+    apiKey: "AIzaSyC4CPhtjFKxFFijIgwG8g1Lx4hEkbxKzLw",
+    authDomain: "bet-hebraico.firebaseapp.com",
+    projectId: "bet-hebraico",
+    storageBucket: "bet-hebraico.firebasestorage.app",
+    messagingSenderId: "770607412120",
+    appId: "1:770607412120:web:3c64ae8e16e27253c231ed",
+    measurementId: "G-8JTWBQKE46"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+</script>
+  <header><div class="brand">BET</div><div class="sub">HEBRAICO BÍBLICO</div></header>
 <nav aria-label="Navegação"><button data-page="inicio" class="active">Início</button><button data-page="alfabeto">Alfabeto</button><button data-page="aulas">Aulas</button><button data-page="exercicios">Exercícios</button><button data-page="trilhas">Trilhas</button><button data-page="laboratorio">Laboratório</button></nav>
 <main>
 <section id="inicio" class="page"><h1>Bem-vindo ao BET</h1><p>Uma jornada pela língua dos textos bíblicos. Aprenda o alfabeto, descubra palavras e avance no seu ritmo.</p><button class="primary" onclick="go('aulas');openLesson(0)">Começar a aprender</button><div class="panel"><h2>Seu percurso</h2><p class="small" id="progressText">Seu progresso aparecerá aqui.</p><div class="progress"><div id="progressBar"></div></div><button class="secondary" onclick="go('aulas')">Ver as aulas</button></div><button class="secondary" onclick="go('trilhas')">Conhecer as seis trilhas</button><h2>O que você vai aprender?</h2><p>Reconhecer as 22 letras, compreender a escrita da direita para a esquerda, ler palavras bíblicas e praticar com exercícios.</p></section>
