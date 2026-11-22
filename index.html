@@ -123,6 +123,16 @@ window.betUsuarioId = user ? user.uid : null;
 
 window.atualizarProgressoLocal?.();
 
+if (user) {
+  window.carregarProgresso(user.uid)
+    .then(aulas => {
+      window.aplicarProgressoNuvem?.(user.uid, aulas);
+    })
+    .catch(erro => {
+      console.error("Erro ao carregar progresso:", erro);
+    });
+}
+
   let statusBar = document.getElementById("usuario-conectado");
 
   if (!statusBar) {
