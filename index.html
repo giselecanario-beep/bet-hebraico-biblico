@@ -97,6 +97,13 @@
 .listening-choices .choice{text-align:center;font:clamp(30px,7vw,43px)/1.6 'Times New Roman',serif;min-height:78px;direction:rtl}
 .listening-choices .choice:focus-visible{outline:3px solid var(--wine);outline-offset:2px}
 @media(max-width:490px){.listening-choices{grid-template-columns:1fr}.listening-choices .choice{min-height:65px}}
+
+.practice-modes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:22px 0 16px}
+.practice-mode{padding:15px 12px;border:1px solid var(--line);border-radius:10px;background:#fffaf4;color:var(--wine);font:600 16px/1.4 Arial,sans-serif;min-height:58px;text-align:center}
+.practice-mode[aria-pressed="true"]{background:var(--wine);color:#fff;border-color:var(--wine)}
+.practice-mode:focus-visible{outline:3px solid var(--wine);outline-offset:3px}
+#letterPractice,#listeningPractice{scroll-margin-top:82px}
+@media(max-width:420px){.practice-modes{gap:8px}.practice-mode{font-size:14px;padding:13px 7px}}
 </style>
   
 </head>
@@ -261,8 +268,11 @@ document.getElementById("btn-recuperar")?.addEventListener("click", async () => 
 <section id="exercicios" class="page hidden">
 <h1>Vamos praticar?</h1>
 <p>Treine o alfabeto e descubra palavras bíblicas pela escuta.</p>
-<button type="button" class="secondary" onclick="document.getElementById('listeningPractice').scrollIntoView({behavior:'smooth',block:'start'})">🎧 Ir ao treino de escuta</button>
-<div class="panel">
+<div class="practice-modes" role="group" aria-label="Escolha o tipo de exercício">
+  <button type="button" id="chooseLetters" class="practice-mode" aria-pressed="true" onclick="switchPracticeMode('letters')">🔤 Reconhecer letras</button>
+  <button type="button" id="chooseListening" class="practice-mode" aria-pressed="false" onclick="switchPracticeMode('listening')">🎧 Ouvir palavras</button>
+</div>
+<div class="panel" id="letterPractice">
   <h2>Reconheça as letras</h2>
   <p class="small" id="quizCount"></p>
   <div class="big-hebrew" id="quizGlyph"></div>
@@ -271,7 +281,7 @@ document.getElementById("btn-recuperar")?.addEventListener("click", async () => 
   <div class="feedback" id="quizFeedback" aria-live="polite"></div>
   <button class="primary hidden" id="quizNext" onclick="nextQuestion()">Próxima pergunta</button>
 </div>
-<section class="panel listening-practice" id="listeningPractice" aria-labelledby="listeningTitle">
+<section class="panel listening-practice hidden" id="listeningPractice" aria-labelledby="listeningTitle">
   <h2 id="listeningTitle">🎧 Ouça e descubra</h2>
   <p>Escute uma palavra em hebraico e escolha sua escrita correta. Você pode ouvir quantas vezes quiser.</p>
   <p class="small" id="listeningCount">Cinco palavras para praticar.</p>
@@ -468,7 +478,17 @@ function playAlphabetLetter(index){
 }
 
 const key='bet-hebraico-progresso-v1';let completed=[];try{const stored=JSON.parse(localStorage.getItem(key)||'[]');completed=Array.isArray(stored)?stored.filter(x=>Number.isInteger(x)&&x>=0&&x<lessons.length):[]}catch(e){};
-function go(page){document.querySelectorAll('.page').forEach(x=>x.classList.toggle('hidden',x.id!==page));document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('active',x.dataset.page===page));window.scrollTo({top:0,behavior:'smooth'});if(page==='exercicios'){startQuiz();if(!listeningOrder.length)startListeningQuiz()}}
+
+function switchPracticeMode(mode){
+  if(mode!=='letters'&&mode!=='listening')return;
+  document.getElementById('letterPractice').classList.toggle('hidden',mode!=='letters');
+  document.getElementById('listeningPractice').classList.toggle('hidden',mode!=='listening');
+  document.getElementById('chooseLetters').setAttribute('aria-pressed',String(mode==='letters'));
+  document.getElementById('chooseListening').setAttribute('aria-pressed',String(mode==='listening'));
+  if(mode!=='listening'&&'speechSynthesis' in window)window.speechSynthesis.cancel();
+}
+
+function go(page){document.querySelectorAll('.page').forEach(x=>x.classList.toggle('hidden',x.id!==page));document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('active',x.dataset.page===page));window.scrollTo({top:0,behavior:'smooth'});if(page==='exercicios'){if(!quiz.length)startQuiz();if(!listeningOrder.length)startListeningQuiz();}}
   
 function chaveProgresso() {
   return window.betUsuarioId
@@ -706,7 +726,7 @@ function nextListeningWord(){
 
 let quiz=[],qIndex=0,score=0,answered=false;function startQuiz(){quiz=[...letters.keys()].sort(()=>Math.random()-.5).slice(0,8);qIndex=0;score=0;showQuestion()}
 function showQuestion(){answered=false;document.getElementById('quizNext').classList.add('hidden');document.getElementById('quizFeedback').textContent='';if(qIndex>=quiz.length){document.getElementById('quizCount').textContent='Resultado';document.getElementById('quizGlyph').textContent='✓';document.getElementById('quizQuestion').textContent=`Você acertou ${score} de ${quiz.length} perguntas.`;document.getElementById('quizChoices').innerHTML='';document.getElementById('quizNext').textContent='Tentar novamente';document.getElementById('quizNext').onclick=startQuiz;document.getElementById('quizNext').classList.remove('hidden');return}document.getElementById('quizNext').textContent='Próxima pergunta';document.getElementById('quizNext').onclick=nextQuestion;const i=quiz[qIndex];document.getElementById('quizCount').textContent=`Pergunta ${qIndex+1} de ${quiz.length}`;document.getElementById('quizGlyph').textContent=letters[i][0];document.getElementById('quizQuestion').textContent='Qual é o nome desta letra?';const options=[i,...letters.map((_,n)=>n).filter(n=>n!==i).sort(()=>Math.random()-.5).slice(0,3)].sort(()=>Math.random()-.5);document.getElementById('quizChoices').innerHTML='';options.forEach(n=>{const b=document.createElement('button');b.className='choice';b.textContent=letters[n][1];b.onclick=()=>answer(n,i);document.getElementById('quizChoices').appendChild(b)})}
-function answer(chosen,correct){if(answered)return;answered=true;if(chosen===correct)score++;document.querySelectorAll('.choice').forEach(b=>{b.disabled=true;if(b.textContent===letters[correct][1])b.classList.add('correct');else if(b.textContent===letters[chosen][1])b.classList.add('wrong')});document.getElementById('quizFeedback').textContent=chosen===correct?'Muito bem! Resposta correta.':`A resposta correta é ${letters[correct][1]}.`;document.getElementById('quizNext').classList.remove('hidden')}
+function answer(chosen,correct){if(answered)return;answered=true;if(chosen===correct)score++;document.querySelectorAll('#quizChoices .choice').forEach(b=>{b.disabled=true;if(b.textContent===letters[correct][1])b.classList.add('correct');else if(b.textContent===letters[chosen][1])b.classList.add('wrong')});document.getElementById('quizFeedback').textContent=chosen===correct?'Muito bem! Resposta correta.':`A resposta correta é ${letters[correct][1]}.`;document.getElementById('quizNext').classList.remove('hidden')}
 function nextQuestion(){qIndex++;showQuestion()}renderLessons();
 </script><div style="text-align:center; padding:25px;">
   <h2>Continue aprendendo com o BET</h2>
