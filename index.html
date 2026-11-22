@@ -100,6 +100,15 @@
 const db = getFirestore(app);
 const progressoRef = (uid) => doc(db, "users", uid, "learning", "intro");
 
+async function salvarProgresso(uid, aulas) {
+  await setDoc(progressoRef(uid), {
+    completed: aulas,
+    updatedAt: serverTimestamp()
+  }, { merge: true });
+}
+
+window.salvarProgresso = salvarProgresso;
+
     onAuthStateChanged(auth, (user) => {
   const areaLogin = document.getElementById("login-area");
   let statusBar = document.getElementById("usuario-conectado");
