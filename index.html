@@ -77,6 +77,18 @@
   }
 }
 
+
+/* Escuta e repetição: visual simples, acessível e adequado ao celular */
+.audio-practice h3{color:var(--wine);margin:0 0 8px}
+.audio-items{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:12px;margin:16px 0}
+.audio-item{display:flex;flex-direction:column;align-items:center;gap:9px;padding:16px 10px;background:white;border:1px solid var(--line);border-radius:9px;text-align:center}
+.audio-hebrew{font:42px/1.3 'Times New Roman',serif;color:var(--wine)}
+.audio-caption{font:14px/1.4 Arial,sans-serif;color:var(--ink)}
+.audio-play{margin:0!important;padding:11px 16px!important;min-height:44px;min-width:115px}
+.audio-help{font:14px/1.5 Arial,sans-serif;color:var(--muted)}
+.audio-status{min-height:22px;font:600 14px/1.5 Arial,sans-serif;color:var(--wine)}
+@media(max-width:560px){.audio-items{grid-template-columns:repeat(2,minmax(0,1fr))}.audio-hebrew{font-size:38px}}
+
 </style>
   
 </head>
@@ -319,6 +331,106 @@ lessons[0].body += `
 
   <p id="resposta-bet" aria-live="polite"></p>
 </div>`;
+
+/* Pronúncia de referência: síntese de voz israelense moderna, quando disponível. */
+const alphabetSpokenNames=[
+  'אָלֶף','בֵּית','גִּימֶל','דָּלֶת','הֵא','וָו','זַיִן','חֵית',
+  'טֵית','יוֹד','כַּף','לָמֶד','מֵם','נוּן','סָמֶךְ','עַיִן',
+  'פֵּא','צָדִי','קוֹף','רֵישׁ','שִׁין','תָּו'
+];
+const lessonSounds=[
+  [
+    {hebrew:'א',spoken:'אָלֶף',label:'Alef · nome da letra'},
+    {hebrew:'בּ',spoken:'בֵּית',label:'Bet · nome da letra'},
+    {hebrew:'אָב',spoken:'אָב',label:'Av · pai'}
+  ],
+  [
+    {hebrew:'ג',spoken:'גִּימֶל',label:'Guímel · nome da letra'},
+    {hebrew:'ד',spoken:'דָּלֶת',label:'Dálet · nome da letra'},
+    {hebrew:'דָּג',spoken:'דָּג',label:'Dag · peixe'}
+  ],
+  [
+    {hebrew:'ה',spoken:'הֵא',label:'He · nome da letra'},
+    {hebrew:'ו',spoken:'וָו',label:'Vav · nome da letra'}
+  ],
+  [
+    {hebrew:'אָב',spoken:'אָב',label:'Av · pai'},
+    {hebrew:'דָּג',spoken:'דָּג',label:'Dag · peixe'},
+    {hebrew:'שָׁלוֹם',spoken:'שָׁלוֹם',label:'Shalom · paz'}
+  ],
+  [
+    {hebrew:'ז',spoken:'זַיִן',label:'Záin · nome da letra'},
+    {hebrew:'ח',spoken:'חֵית',label:'Het · nome da letra'},
+    {hebrew:'זֶה',spoken:'זֶה',label:'Zeh · este'},
+    {hebrew:'חַי',spoken:'חַי',label:'Chai · vivo'}
+  ]
+];
+function lessonAudioPanel(index){
+  const list=lessonSounds[index] || [];
+  if(!list.length)return '';
+  const cards=list.map((item,n)=>
+    '<div class="audio-item">'+
+      '<span class="audio-hebrew" lang="he" dir="rtl">'+item.hebrew+'</span>'+
+      '<span class="audio-caption">'+item.label+'</span>'+
+      '<button type="button" class="secondary audio-play" onclick="playLessonSound('+index+','+n+')" aria-label="Ouvir '+item.label+' em hebraico">🔊 Ouvir</button>'+
+    '</div>'
+  ).join('');
+  return '<section class="panel audio-practice" aria-labelledby="audio-practice-title">'+
+    '<h3 id="audio-practice-title">Escute e repita</h3>'+
+    '<p class="small">Toque em Ouvir, escute a pronúncia e repita em voz alta.</p>'+
+    '<div class="audio-items">'+cards+'</div>'+
+    '<label class="audio-help"><input type="checkbox" id="audioSlow" checked> Reproduzir mais devagar</label>'+
+    '<p id="lessonAudioStatus" class="audio-status" role="status" aria-live="polite"></p>'+
+    '<p class="audio-help">Voz sintetizada em hebraico israelense moderno, quando disponível no aparelho. A pronúncia do hebraico bíblico antigo tinha diferenças.</p>'+
+    '<button type="button" class="secondary" onclick="stopHebrewAudio()">Parar áudio</button>'+
+    '</section>';
+}
+let activeHebrewSpeech = null;
+function stopHebrewAudio(){
+  if('speechSynthesis' in window)window.speechSynthesis.cancel();
+  activeHebrewSpeech=null;
+  const status=document.getElementById('lessonAudioStatus');
+  if(status)status.textContent='Áudio interrompido.';
+}
+function speakHebrew(text,label,statusId){
+  const status=document.getElementById(statusId);
+  const message=(value)=>{if(status)status.textContent=value;};
+  if(!('speechSynthesis' in window) || !('SpeechSynthesisUtterance' in window)){
+    message('Este navegador não oferece leitura em voz alta.');
+    return;
+  }
+  const engine=window.speechSynthesis;
+  const available=engine.getVoices();
+  const hebrewVoice=available.find(v=>/^(he|iw)(-|_|$)/i.test(v.lang));
+  if(available.length && !hebrewVoice){
+    message('Não encontramos uma voz em hebraico neste aparelho. Instale/ative uma voz hebraica nas configurações de texto para fala e tente novamente.');
+    return;
+  }
+  engine.cancel();
+  const speech=new SpeechSynthesisUtterance(text);
+  speech.lang='he-IL';
+  speech.rate=(document.getElementById('audioSlow')?.checked ?? true) ? 0.73 : 0.95;
+  speech.pitch=1;
+  if(hebrewVoice)speech.voice=hebrewVoice;
+  activeHebrewSpeech=speech;
+  speech.onend=()=>{if(activeHebrewSpeech===speech){activeHebrewSpeech=null;message('Fim da escuta. Você pode ouvir novamente.');}};
+  speech.onerror=()=>{if(activeHebrewSpeech===speech){activeHebrewSpeech=null;message('Não foi possível reproduzir. Confira a voz hebraica nas configurações do aparelho.');}};
+  try{
+    engine.speak(speech);
+    message('Reproduzindo: '+label+'. Escute e repita.');
+  }catch(error){
+    activeHebrewSpeech=null;
+    message('O áudio não está disponível neste navegador.');
+  }
+}
+function playLessonSound(lessonIndex,itemIndex){
+  const item=lessonSounds[lessonIndex]?.[itemIndex];
+  if(item)speakHebrew(item.spoken,item.label,'lessonAudioStatus');
+}
+function playAlphabetLetter(index){
+  if(letters[index])speakHebrew(alphabetSpokenNames[index],letters[index][1],'alphabetAudioStatus');
+}
+
 const key='bet-hebraico-progresso-v1';let completed=[];try{const stored=JSON.parse(localStorage.getItem(key)||'[]');completed=Array.isArray(stored)?stored.filter(x=>Number.isInteger(x)&&x>=0&&x<lessons.length):[]}catch(e){};
 function go(page){document.querySelectorAll('.page').forEach(x=>x.classList.toggle('hidden',x.id!==page));document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('active',x.dataset.page===page));window.scrollTo({top:0,behavior:'smooth'});if(page==='exercicios')startQuiz()}
   
@@ -376,7 +488,7 @@ window.aplicarProgressoNuvem = (uid, aulas) => {
 };
 
 document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()=>go(b.dataset.page)));
-const grid=document.getElementById('letterGrid');letters.forEach((l,i)=>{const b=document.createElement('button');b.className='letter';b.innerHTML=`<span class="glyph" lang="he" dir="rtl">${l[0]}</span><span>${l[1]}</span>`;b.onclick=()=>{const d=document.getElementById('letterDetail');d.classList.remove('hidden');d.innerHTML=`<div class="big-hebrew" lang="he">${l[0]}</div><h2>${l[1]}</h2><p><strong>Transliteração:</strong> ${l[2]}</p><p>${l[3]}</p>`;d.scrollIntoView({behavior:'smooth',block:'nearest'})};grid.appendChild(b)});
+const grid=document.getElementById('letterGrid');letters.forEach((l,i)=>{const b=document.createElement('button');b.className='letter';b.innerHTML=`<span class="glyph" lang="he" dir="rtl">${l[0]}</span><span>${l[1]}</span>`;b.onclick=()=>{const d=document.getElementById('letterDetail');d.classList.remove('hidden');d.innerHTML=`<div class="big-hebrew" lang="he">${l[0]}</div><h2>${l[1]}</h2><p><strong>Transliteração:</strong> ${l[2]}</p><p>${l[3]}</p><button type="button" class="secondary audio-play" onclick="playAlphabetLetter(${i})">🔊 Ouvir o nome da letra</button><p class="audio-status" id="alphabetAudioStatus" role="status" aria-live="polite"></p><p class="audio-help">A voz sintetizada segue a pronúncia israelense moderna.</p>`;d.scrollIntoView({behavior:'smooth',block:'nearest'})};grid.appendChild(b)});
 function renderLessons(){document.getElementById('lessonList').innerHTML=lessons.map((l,i)=>`<button class="lesson" onclick="openLesson(${i})"><strong>${completed.includes(i)?'✓ ':''}Aula ${i+1}: ${l.title}</strong><span>${l.subtitle}${completed.includes(i)?' · Concluída':''}</span></button>`).join('');document.getElementById('progressText').textContent=`${completed.length} de ${lessons.length} aulas introdutórias concluídas.`;document.getElementById('progressBar').style.width=(completed.length/lessons.length*100)+'%'}
 function answerDag(button, correct){
   button.parentElement.querySelectorAll('.choice').forEach(choice => {
@@ -442,7 +554,7 @@ function answerZainHet(button, correct) {
       : 'Tente de novo! ה é He; a consoante gutural é ח (Het).');
   activity.querySelector('.feedback').textContent = message;
 }
-function openLesson(i){const l=lessons[i],view=document.getElementById('lessonView');view.classList.remove('hidden');view.innerHTML=`<span class="tag">Aula ${i+1} de ${lessons.length}</span><h2>${l.title}</h2>${l.body}<button class="primary" onclick="completeLesson(${i})">${completed.includes(i)?'Revisar e continuar':'Concluir aula'}</button><button class="secondary" onclick="go('exercicios')">Praticar letras</button>`;view.scrollIntoView({behavior:'smooth',block:'start'})}
+function openLesson(i){if('speechSynthesis' in window)window.speechSynthesis.cancel();const l=lessons[i],view=document.getElementById('lessonView');view.classList.remove('hidden');view.innerHTML=`<span class="tag">Aula ${i+1} de ${lessons.length}</span><h2>${l.title}</h2>${l.body}${lessonAudioPanel(i)}<button class="primary" onclick="completeLesson(${i})">${completed.includes(i)?'Revisar e continuar':'Concluir aula'}</button><button class="secondary" onclick="go('exercicios')">Praticar letras</button>`;view.scrollIntoView({behavior:'smooth',block:'start'})}
 function completeLesson(i){if(!completed.includes(i)){completed.push(i);try{
 localStorage.setItem(chaveProgresso(),JSON.stringify(completed))
   
