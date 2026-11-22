@@ -173,8 +173,7 @@ document.getElementById("btn-recuperar")?.addEventListener("click", async () => 
     alert("Erro: " + (erro?.code || erro?.message || "desconhecido"));
   }
 });
-    return;
-  }
+</script>
   try {
     await sendPasswordResetEmail(auth, email);
     alert("E-mail de recuperação enviado. Verifique a caixa de entrada e o spam.");
