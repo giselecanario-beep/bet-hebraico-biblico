@@ -104,6 +104,26 @@
 .practice-mode:focus-visible{outline:3px solid var(--wine);outline-offset:3px}
 #letterPractice,#listeningPractice{scroll-margin-top:82px}
 @media(max-width:420px){.practice-modes{gap:8px}.practice-mode{font-size:14px;padding:13px 7px}}
+
+/* Tutora contextual: protótipo guiado, sem acesso a dados pessoais. */
+.tutor-panel{border:1px solid #c9b0aa;background:#fffaf4;padding:22px;scroll-margin-top:80px}
+.tutor-header{display:flex;align-items:center;gap:13px}
+.tutor-mark{width:48px;height:48px;min-width:48px;border-radius:50%;display:grid;place-items:center;background:var(--wine);color:white;font:700 25px Georgia,serif}
+.tutor-heading{font:bold 23px/1.2 Georgia,serif;color:var(--wine);margin:0}
+.tutor-kicker{font:12px/1.4 Arial,sans-serif;color:var(--muted);margin-top:4px}
+.tutor-caption{font:14px/1.5 Arial,sans-serif;color:var(--muted);margin:12px 0}
+.tutor-chat{max-height:300px;min-height:90px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:12px;border-radius:9px;background:#f5eee5;border:1px solid var(--line)}
+.tutor-bubble{font:15px/1.5 Arial,sans-serif;margin:0;padding:11px 13px;border-radius:10px;max-width:94%;white-space:pre-wrap;overflow-wrap:anywhere}
+.tutor-bubble--tutor{background:#fff;color:var(--ink);align-self:flex-start}
+.tutor-bubble--student{background:var(--wine);color:#fff;align-self:flex-end}
+.tutor-quick{display:flex;flex-wrap:wrap;gap:7px;margin:14px 0}
+.tutor-quick button{padding:10px 12px;border-radius:8px;border:1px solid #c9b0aa;background:#fff;color:var(--wine);font:600 13px/1.4 Arial,sans-serif;min-height:44px;flex:1 1 160px;text-align:left}
+.tutor-quick button:focus-visible{outline:3px solid var(--wine);outline-offset:2px}
+.tutor-form{display:flex;align-items:stretch;gap:8px;margin:8px 0}
+.tutor-form input{flex:1;min-width:0;padding:12px;border-radius:8px;border:1px solid #c9b0aa;font:15px Arial,sans-serif}
+.tutor-form button{margin:0;padding:12px 17px;min-height:44px}
+.tutor-speak{font:600 13px Arial,sans-serif;margin:10px 0 2px 0;padding:10px 13px;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--wine)}
+@media(max-width:450px){.tutor-panel{padding:15px}.tutor-heading{font-size:20px}.tutor-form button{padding:11px}.tutor-bubble{max-width:100%}}
 </style>
   
 </head>
@@ -610,7 +630,134 @@ function answerZainHet(button, correct) {
       : 'Tente de novo! ה é He; a consoante gutural é ח (Het).');
   activity.querySelector('.feedback').textContent = message;
 }
-function openLesson(i){if('speechSynthesis' in window)window.speechSynthesis.cancel();const l=lessons[i],view=document.getElementById('lessonView');view.classList.remove('hidden');view.innerHTML=`<span class="tag">Aula ${i+1} de ${lessons.length}</span><h2>${l.title}</h2>${l.body}${lessonAudioPanel(i)}<button class="primary" onclick="completeLesson(${i})">${completed.includes(i)?'Revisar e continuar':'Concluir aula'}</button><button class="secondary" onclick="go('exercicios')">Praticar letras</button>`;view.scrollIntoView({behavior:'smooth',block:'start'})}
+
+/* Tutora IA · Gisele: conversa guiada demonstrativa; sem API e sem gravação de perguntas. */
+const tutorLessons=[
+ {name:'Alef e Bet',questions:[
+  {q:'Por que lemos da direita para a esquerda?',keys:['direita','esquerda','sentido','direcao'],a:'Porque a escrita hebraica segue, por convenção histórica, da direita para a esquerda. A ordem das letras de uma palavra também acompanha esse sentido.'},
+  {q:'O Alef tem som?',keys:['alef','glotal'],a:'Historicamente, Alef (א) representa uma consoante glotal, produzida na garganta. Em várias tradições modernas de leitura ela quase não se ouve. Observe como o contexto e os sinais vocálicos ajudam a ler.'},
+  {q:'Como distinguir Bet com e sem pontinho?',keys:['bet','pontinho','dagesh','b','v'],a:'Na pronúncia israelense moderna, בּ com dagesh costuma soar como b; ב sem esse ponto pode soar como v. Esse detalhe torna a escrita muito interessante!'}
+ ]},
+ {name:'Guímel e Dálet',questions:[
+  {q:'Qual letra vem primeiro em דָּג?',keys:['primeiro','comeca','direita','dag'],a:'Na palavra דָּג, lemos primeiro Dálet (ד), que aparece à direita; depois, Guímel (ג), à esquerda.'},
+  {q:'O que significa דָּג?',keys:['significa','peixe','dag'],a:'דָּג (dag) significa peixe. É uma palavra pequena, ótima para treinar a leitura da direita para a esquerda.'},
+  {q:'Como pronunciar Guímel e Dálet?',keys:['pronuncia','guimel','dalet','som'],a:'Guímel (ג) apresenta um som como o g de “gato”; Dálet (ד), como d. Em דָּג, ouvimos dag.'}
+ ]},
+ {name:'He e Vav',questions:[
+  {q:'Qual a diferença entre He e Het?',keys:['he','het','diferenca','aspirado'],a:'He (ה) indica historicamente um som aspirado, como h em inglês. Het (ח) tem articulação gutural distinta; na leitura israelense moderna, costuma soar como um kh produzido no fundo da boca.'},
+  {q:'O que faz a letra Vav?',keys:['vav','vogal','w','v'],a:'Vav (ו) foi historicamente uma consoante com som próximo de w. No hebraico israelense moderno, costuma soar como v. Na escrita bíblica também pode ajudar a indicar as vogais o e u.'},
+  {q:'Quem colocou os sinais vocálicos?',keys:['massoreta','sinais','pontinhos','vocalico'],a:'Os sinais de vogais foram sistematizados por estudiosos conhecidos como massoretas, muitos séculos após a composição de vários textos bíblicos. Eles registraram tradições de leitura.'}
+ ]},
+ {name:'As primeiras palavras',questions:[
+  {q:'O que significa Shalom?',keys:['shalom','paz','integridade'],a:'שָׁלוֹם (shalom) costuma ser traduzida como paz, mas também expressa bem-estar, integridade e plenitude, conforme o contexto.'},
+  {q:'Como ler a palavra אָב?',keys:['av','pai','alef','bet'],a:'Lemos אָב da direita para a esquerda: Alef (א), depois Bet (ב). Sua pronúncia corrente é av, e a palavra significa pai.'},
+  {q:'Para que servem os pontos nas palavras?',keys:['pontos','pontinhos','vogais','massoreta'],a:'Os sinais de vocalização ajudam o leitor a identificar as vogais. Eles foram acrescentados à tradição escrita por estudiosos massoretas, em período posterior.'}
+ ]},
+ {name:'Záin e Het',questions:[
+  {q:'Como pronunciar Het?',keys:['het','kh','garganta'],a:'Het (ח) é uma consoante gutural. Na leitura israelense moderna, soa como kh produzido na parte de trás da boca. Sua realização no hebraico bíblico antigo não era necessariamente idêntica.'},
+  {q:'Qual é o som de Záin?',keys:['zain','som','zeh','z'],a:'Záin (ז) tem som próximo ao z de “zebra”. Veja a palavra זֶה (zeh), que pode significar este ou isto, conforme o contexto.'},
+  {q:'Qual a diferença entre He e Het?',keys:['he','het','diferenca'],a:'He (ה) é historicamente aspirado; Het (ח) é gutural. A distinção é importante quando se observa a escrita de palavras hebraicas.'}
+ ]}
+];
+let currentTutorLesson=-1;
+let lastTutorAnswer='';
+function tutorNormalize(value){
+ return String(value).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+}
+function tutorPanel(index){
+ if(!tutorLessons[index])return '';
+ return '<section class="panel tutor-panel" id="lessonTutor" aria-labelledby="tutorHeading">'+
+   '<div class="tutor-header"><div class="tutor-mark" aria-hidden="true">G</div><div>'+
+   '<h3 id="tutorHeading" class="tutor-heading">Tutora IA · Gisele</h3>'+
+   '<div class="tutor-kicker">Converse durante a aula · experiência guiada</div></div></div>'+
+   '<p class="tutor-caption">Protótipo com respostas preparadas para esta aula. Ainda não é uma conversa livre com inteligência artificial nem usa a voz clonada da professora.</p>'+
+   '<div id="tutorChat" class="tutor-chat" role="log" aria-live="polite" aria-relevant="additions" aria-label="Conversa com a tutora"></div>'+
+   '<div id="tutorQuick" class="tutor-quick" aria-label="Sugestões de dúvidas"></div>'+
+   '<form class="tutor-form" onsubmit="return askTutorForm(event)">'+
+   '<input id="tutorInput" type="text" maxlength="180" autocomplete="off" placeholder="Escreva uma dúvida desta aula" aria-label="Sua pergunta sobre a aula" required />'+
+   '<button type="submit" class="primary">Enviar</button>'+
+   '</form>'+
+   '<button type="button" class="tutor-speak" onclick="hearTutorAnswer()">🔊 Ouvir a resposta (voz do aparelho)</button>'+
+   '<p class="tutor-caption">Perguntas e respostas ficam apenas nesta tela e não são enviadas a serviços externos.</p>'+
+   '</section>';
+}
+function tutorAddBubble(text,role){
+ const chat=document.getElementById('tutorChat');
+ if(!chat)return;
+ const bubble=document.createElement('p');
+ bubble.className='tutor-bubble tutor-bubble--'+(role==='student'?'student':'tutor');
+ bubble.textContent=text;
+ chat.appendChild(bubble);
+ chat.scrollTop=chat.scrollHeight;
+}
+function initTutor(index){
+ currentTutorLesson=index;
+ const guide=tutorLessons[index];
+ const quick=document.getElementById('tutorQuick');
+ if(!guide||!quick)return;
+ quick.innerHTML='';
+ tutorAddBubble('Shalom! Sou a tutora virtual do BET. Vamos conversar sobre '+guide.name+'? Escolha uma pergunta ou escreva sua dúvida.','tutor');
+ guide.questions.forEach((q,i)=>{
+   const btn=document.createElement('button');
+   btn.type='button';
+   btn.textContent=q.q;
+   btn.onclick=()=>askTutorGuided(i);
+   quick.appendChild(btn);
+ });
+ lastTutorAnswer='';
+}
+function tutorAnswerQuestion(input,preferredIndex){
+ const lesson=tutorLessons[currentTutorLesson];
+ if(!lesson)return 'Abra uma aula para conversar sobre seu conteúdo.';
+ if(Number.isInteger(preferredIndex)&&lesson.questions[preferredIndex])return lesson.questions[preferredIndex].a;
+ const question=tutorNormalize(input);
+ const tokens=question.split(/\s+/).filter(word=>word.length>2);
+ let best=null,score=0;
+ lesson.questions.forEach(item=>{
+   const hits=item.keys.reduce((total,key)=>{
+     const normalized=tutorNormalize(key);
+     if(normalized.length<=2)return total;
+     return total+(question.includes(normalized)?1:0);
+   },0);
+   if(hits>score){score=hits;best=item;}
+ });
+ if(best&&score>0)return best.a;
+ return 'Essa é uma ótima pergunta. Nesta demonstração, ainda consigo explicar apenas os temas sugeridos aqui. Escolha uma das perguntas acima. Na versão completa, poderemos conversar livremente sobre sua dúvida.';
+}
+function tutorReply(question,answer){
+ tutorAddBubble(question,'student');
+ tutorAddBubble(answer,'tutor');
+ lastTutorAnswer=answer;
+}
+function askTutorGuided(index){
+ const lesson=tutorLessons[currentTutorLesson];
+ const q=lesson?.questions[index];
+ if(!q)return;
+ tutorReply(q.q,tutorAnswerQuestion(q.q,index));
+}
+function askTutorForm(event){
+ if(event)event.preventDefault();
+ const input=document.getElementById('tutorInput');
+ const question=input?.value?.trim();
+ if(!question)return false;
+ tutorReply(question,tutorAnswerQuestion(question,null));
+ input.value='';
+ return false;
+}
+function hearTutorAnswer(){
+ const answer=lastTutorAnswer;
+ if(!answer)return;
+ if(!('speechSynthesis' in window)||!('SpeechSynthesisUtterance' in window))return;
+ const voice=new SpeechSynthesisUtterance(answer);
+ voice.lang='pt-BR';voice.rate=0.94;
+ const available=window.speechSynthesis.getVoices();
+ const brazilian=available.find(v=>/^pt-BR$/i.test(v.lang)) || available.find(v=>/^pt/i.test(v.lang));
+ if(brazilian)voice.voice=brazilian;
+ window.speechSynthesis.cancel();
+ window.speechSynthesis.speak(voice);
+}
+
+function openLesson(i){if('speechSynthesis' in window)window.speechSynthesis.cancel();const l=lessons[i],view=document.getElementById('lessonView');view.classList.remove('hidden');view.innerHTML=`<span class="tag">Aula ${i+1} de ${lessons.length}</span><h2>${l.title}</h2>${l.body}${lessonAudioPanel(i)}${tutorPanel(i)}<button class="primary" onclick="completeLesson(${i})">${completed.includes(i)?'Revisar e continuar':'Concluir aula'}</button><button class="secondary" onclick="go('exercicios')">Praticar letras</button>`;initTutor(i);view.scrollIntoView({behavior:'smooth',block:'start'})}
 function completeLesson(i){if(!completed.includes(i)){completed.push(i);try{
 localStorage.setItem(chaveProgresso(),JSON.stringify(completed))
   
