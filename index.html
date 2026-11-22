@@ -44,6 +44,45 @@
     onAuthStateChanged(auth, (user) => {
   console.log(user ? "Usuário conectado" : "Nenhum usuário conectado");
 });
+    
+document.getElementById("btnCadastrar").addEventListener("click", async () => {
+  const email = document.getElementById("email").value.trim();
+  const senha = document.getElementById("senha").value;
+  const mensagem = document.getElementById("mensagemLogin");
+
+  if (!email || !senha) {
+    mensagem.textContent = "Preencha seu e-mail e sua senha.";
+    return;
+  }
+
+  try {
+    await createUserWithEmailAndPassword(auth, email, senha);
+    mensagem.textContent = "Conta criada com sucesso!";
+  } catch (erro) {
+    mensagem.textContent = erro.code === "auth/email-already-in-use"
+      ? "Este e-mail já está cadastrado."
+      : "Não foi possível criar a conta. Confira os dados.";
+  }
+});
+
+document.getElementById("btnEntrar").addEventListener("click", async () => {
+  const email = document.getElementById("email").value.trim();
+  const senha = document.getElementById("senha").value;
+  const mensagem = document.getElementById("mensagemLogin");
+
+  if (!email || !senha) {
+    mensagem.textContent = "Preencha seu e-mail e sua senha.";
+    return;
+  }
+
+  try {
+    await signInWithEmailAndPassword(auth, email, senha);
+    mensagem.textContent = "Login realizado com sucesso!";
+  } catch (erro) {
+    mensagem.textContent = "Não foi possível entrar. Confira e-mail e senha.";
+  }
+});
+
 </script>
   <header><div class="brand">BET</div><div class="sub">HEBRAICO BÍBLICO</div></header>
 <nav aria-label="Navegação"><button data-page="inicio" class="active">Início</button><button data-page="alfabeto">Alfabeto</button><button data-page="aulas">Aulas</button><button data-page="exercicios">Exercícios</button><button data-page="trilhas">Trilhas</button><button data-page="laboratorio">Laboratório</button></nav>
