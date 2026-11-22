@@ -173,6 +173,15 @@ document.getElementById("btn-recuperar")?.addEventListener("click", async () => 
     alert("Erro: " + (erro?.code || erro?.message || "desconhecido"));
   }
 });
+    return;
+  }
+  try {
+    await sendPasswordResetEmail(auth, email);
+    alert("E-mail de recuperação enviado. Verifique a caixa de entrada e o spam.");
+  } catch (erro) {
+    alert("Erro: " + (erro?.code || erro?.message || "desconhecido"));
+  }
+});
     p.id = "mensagemLogin";
     p.style.cssText = "margin-top:8px;color:#751f32;font-family:Georgia,serif;";
     document.getElementById("btn-recuperar")?.insertAdjacentElement("afterend", p);
