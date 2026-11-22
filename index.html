@@ -109,6 +109,13 @@ async function salvarProgresso(uid, aulas) {
 
 window.salvarProgresso = salvarProgresso;
 
+window.carregarProgresso = async (uid) => {
+  const registro = await getDoc(progressoRef(uid));
+  return registro.exists()
+    ? registro.data().completed || []
+    : [];
+};
+
     onAuthStateChanged(auth, (user) => {
   const areaLogin = document.getElementById("login-area");
       
