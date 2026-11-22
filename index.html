@@ -112,6 +112,9 @@
 
     document.getElementById("btn-sair").addEventListener("click", async () => {
       await signOut(auth);
+      statusBar.style.display = "none";
+      statusBar.innerHTML = "";
+      if (areaLogin) areaLogin.style.display = "flex";
     });
   } else {
     statusBar.style.display = "none";
