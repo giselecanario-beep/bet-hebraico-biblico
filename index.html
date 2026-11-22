@@ -8,29 +8,31 @@
 .tracks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:20px 0}.track{background:#fffaf4;border:1px solid var(--line);border-radius:12px;padding:19px}.track h3{font-size:22px;color:var(--wine);margin:10px 0}.track p{font:15px/1.55 Arial,sans-serif;margin:8px 0 14px}.track .primary,.track .secondary{margin:4px 0;font-size:14px;padding:11px}.track .tag{font-size:12px}.track.locked{background:#f1eae2}.track.locked button{opacity:.7;cursor:default}.section-intro{max-width:660px}.lab-word{font:64px/1.5 'Times New Roman',serif;text-align:center;color:var(--wine)}@media(max-width:560px){.tracks{grid-template-columns:1fr}nav{flex-wrap:wrap}nav button{font-size:12px}}
 
 #login-area {
-  max-width: 700px;
-  margin: 25px auto;
-  padding: 25px;
+  max-width: 520px;
+  margin: 28px auto;
+  padding: 28px;
   background: #f7f1e7;
-  border: 1px solid #dfd3c6;
+  border: 1px solid #dfd3c3;
   border-radius: 10px;
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 12px;
 }
-
 #login-area h2 {
   width: 100%;
+  margin: 0 0 6px 0;
   color: #751f32;
   font-family: Georgia, serif;
+  font-size: 1.5rem;
 }
 
 #login-area input {
+  width: 100%;
   padding: 12px;
-  border: 1px solid #c8b7ae;
+  border: 1px solid #cbb7ae;
   border-radius: 5px;
-  flex: 1 1 180px;
-  min-width: 0;
+  font-size: 1rem;
+  box-sizing: border-box;
 }
 
 #login-area button {
@@ -40,9 +42,11 @@
   border: none;
   border-radius: 5px;
   cursor: pointer;
+  font-size: 1rem;
+  font-family: Georgia, serif;
 }
 
-#login-area #btnCadastrar {
+#login-area .btn-secondary {
   background: transparent;
   color: #751f32;
   border: 1px solid #751f32;
