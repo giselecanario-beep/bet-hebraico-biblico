@@ -879,72 +879,59 @@ function speakHebrew(text,label,statusId){
     else message(unavailable);
   },1800);
 }
+/* BET: arquivos de pronuncia gravados no repositorio, sem TTS do aparelho. */
+const betLocalVowels=['a','e','i','o','u'].map(x=>'./assets/audio/vogal-'+x+'.mp3');
+const betLocalWordTexts=['אָב','דָּג','הוּא','שָׁלוֹם','זֶה','חַי'];
+let betRecordedAudio=null;
+let betRecordedRequest=0;
+function playBetRecording(source,label,statusId){
+ const request=++betRecordedRequest;
+ const status=document.getElementById(statusId);
+ const message=text=>{if(request===betRecordedRequest&&status)status.textContent=text};
+ if(betRecordedAudio){
+  betRecordedAudio.pause();
+  betRecordedAudio.removeAttribute('src');
+  betRecordedAudio.load();
+  betRecordedAudio=null;
+ }
+ if('speechSynthesis' in window)window.speechSynthesis.cancel();
+ if(!source||typeof Audio!=='function'){
+  message('Não foi possível iniciar o áudio neste navegador.');
+  return;
+ }
+ try{
+  const audio=new Audio(source);
+  betRecordedAudio=audio;
+  audio.preload='auto';
+  audio.addEventListener('ended',()=>message('Fim da escuta em hebraico. Toque novamente para repetir.'));
+  audio.addEventListener('error',()=>message('O arquivo hebraico não carregou. Confira sua conexão.'));
+  message('Reproduzindo áudio em hebraico: '+label+'.');
+  const playing=audio.play();
+  if(playing&&typeof playing.catch==='function'){
+   playing.catch(()=>message('Este navegador bloqueou ou não conseguiu reproduzir. Toque novamente.'));
+  }
+ }catch(error){
+  message('Não foi possível iniciar a gravação em hebraico neste aparelho.');
+ }
+}
+function playRecordedAlphabet(index,statusId){
+ if(!Number.isInteger(index)||index<0||index>=alphabetSpokenNames.length)return;
+ const name='letra-'+String(index+1).padStart(2,'0')+'.wav';
+ playBetRecording('./assets/audio/'+name,letters[index][1],statusId);
+}
 function playLessonSound(lessonIndex,itemIndex){
  const item=lessonSounds[lessonIndex]?.[itemIndex];
  if(!item)return;
- const idx=alphabetSpokenNames.indexOf(item.spoken);
- if(idx>=0){playRecordedAlphabet(idx,'lessonAudioStatus');return;}
- const word=betRecordedWords.find(w=>w.hebrew===item.spoken);
- if(word){playBetRecording(betRecordedWordsUrl,item.label,'lessonAudioStatus',word.start,word.end);return;}
+ const letter=alphabetSpokenNames.indexOf(item.spoken);
+ if(letter>=0){playRecordedAlphabet(letter,'lessonAudioStatus');return;}
+ const word=betLocalWordTexts.indexOf(item.spoken);
+ if(word>=0){
+  playBetRecording('./assets/audio/palavra-'+String(word+1).padStart(2,'0')+'.wav',item.label,'lessonAudioStatus');
+  return;
+ }
  const status=document.getElementById('lessonAudioStatus');
- if(status)status.textContent='Ainda não temos gravação em hebraico para este som.';
+ if(status)status.textContent='Esta gravação ainda não foi preparada.';
 }
-
-/* Áudio HE GERADO EM ARQUIVOS: não chama a voz padrão pt-BR do celular. */
-const betRecordedVowels=["https://resource2.heygen.ai/text_to_speech/6e1f3db1c7b64bbab86f4b80ae0e40a9/330290724a1b470fb63153f34d4c0183/id=1ac2b82376f64c66bde0a762edae57b5.mp3","https://resource2.heygen.ai/text_to_speech/6e1f3db1c7b64bbab86f4b80ae0e40a9/330290724a1b470fb63153f34d4c0183/id=fedd4c1712184c4fac070faacf8c1969.mp3","https://resource2.heygen.ai/text_to_speech/6e1f3db1c7b64bbab86f4b80ae0e40a9/330290724a1b470fb63153f34d4c0183/id=032a5b556c3a47358a9be2547f0cb014.mp3","https://resource2.heygen.ai/text_to_speech/6e1f3db1c7b64bbab86f4b80ae0e40a9/330290724a1b470fb63153f34d4c0183/id=df14a5d337d244ccb1ee847ca27f9caa.mp3","https://resource2.heygen.ai/text_to_speech/6e1f3db1c7b64bbab86f4b80ae0e40a9/330290724a1b470fb63153f34d4c0183/id=239254406fbd442f9945366ce8a6ff21.mp3"];
-const betRecordedAlphabetUrl="https://resource2.heygen.ai/text_to_speech/6e1f3db1c7b64bbab86f4b80ae0e40a9/330290724a1b470fb63153f34d4c0183/id=5bc56ababa574278affea02666ce920f.wav";
-const betRecordedAlphabetStarts=[0.299,1.024,1.792,2.56,3.285,3.84,4.48,5.163,5.931,6.741,7.381,8.085,8.725,9.365,10.005,10.73,11.456,12.01,12.821,13.461,13.845,14.869];
-const betRecordedWordsUrl="https://resource2.heygen.ai/text_to_speech/6e1f3db1c7b64bbab86f4b80ae0e40a9/330290724a1b470fb63153f34d4c0183/id=661b1547c1f642d8a3664eb72e34764b.wav";
-const betRecordedWords=[{"hebrew":"אָב","start":0.299,"end":0.78},{"hebrew":"דָּג","start":0.939,"end":1.42},{"hebrew":"הוּא","start":1.536,"end":2.02},{"hebrew":"שָׁלוֹם","start":2.133,"end":2.87},{"hebrew":"זֶה","start":2.99,"end":3.43},{"hebrew":"חַי","start":3.541,"end":4}];
-let betRecordedAudio=null;
-let betAudioRequest=0;
-function playBetRecording(source,label,statusId,start=0,end=null){
- const id=++betAudioRequest;
- const status=document.getElementById(statusId);
- const update=message=>{if(id===betAudioRequest&&status)status.textContent=message};
- if(!source){update('Ainda não temos uma gravação em hebraico para este som.');return;}
- if(betRecordedAudio){betRecordedAudio.pause();betRecordedAudio.src='';betRecordedAudio=null;}
- // Se a IA Gisele estiver falando em português, interrompemos a explicação antes do som hebraico.
- if('speechSynthesis' in window)window.speechSynthesis.cancel();
- if(typeof Audio!=='function'){update('Seu navegador não oferece reprodução de áudio.');return;}
- const file=new Audio();
- betRecordedAudio=file;
- file.preload='auto';
- file.src=source;
- const isSegment=Number.isFinite(end)&&end>start;
- if(isSegment){
-  // Configurar o recorte antes da reprodução, sem aguardar outro gesto no Android.
-  const seek=()=>{
-   if(id!==betAudioRequest)return;
-   try{file.currentTime=Math.max(0,start-0.07)}catch(e){}
-  };
-  file.addEventListener('loadedmetadata',seek,{once:true});
-  if(file.readyState>=1)seek();
-  file.addEventListener('timeupdate',()=>{
-   if(id!==betAudioRequest)return;
-   if(file.currentTime>=end){
-    file.pause();
-    update('Fim da escuta em hebraico. Toque novamente para repetir.');
-   }
-  });
- }
- // O play() acontece diretamente no toque do estudante, necessário em celulares.
- const promise=file.play();
- if(promise&&typeof promise.catch==='function'){
-  promise.catch(()=>update('Não foi possível reproduzir a gravação em hebraico. Confira a conexão e toque novamente.'));
- }
- file.addEventListener('ended',()=>update('Fim da escuta em hebraico. Toque novamente para repetir.'));
- file.addEventListener('error',()=>update('Não foi possível carregar o áudio em hebraico. Confira sua conexão.'));
- update('Preparando áudio em hebraico: '+label+'.');
-}
-function playRecordedAlphabet(index,statusId){
- if(!Number.isInteger(index)||index<0||index>=betRecordedAlphabetStarts.length)return;
- const begin=betRecordedAlphabetStarts[index];
- const end=index+1<betRecordedAlphabetStarts.length?betRecordedAlphabetStarts[index+1]-.12:15.5;
- playBetRecording(betRecordedAlphabetUrl,letters[index][1],statusId,begin,end);
-}
-
-/* Som imediato das vogais: a cada toque, reproduz arquivo em hebraico. */
 const betVowelAudio=[
  {hebrew:'אַ',label:'vogal A'},
  {hebrew:'אֶ',label:'vogal E'},
@@ -953,11 +940,9 @@ const betVowelAudio=[
  {hebrew:'אֻ',label:'vogal U'}
 ];
 function playVowelSound(index){
- const vowel=betVowelAudio[index];
- if(!vowel)return;
- playBetRecording(betRecordedVowels[index],vowel.label,'vowelAudioStatus');
+ const item=betVowelAudio[index];
+ if(item)playBetRecording(betLocalVowels[index],item.label,'vowelAudioStatus');
 }
-
 function playAlphabetLetter(index){
  if(letters[index])playRecordedAlphabet(index,'alphabetAudioStatus');
 }
@@ -1074,7 +1059,7 @@ window.aplicarProgressoNuvem = (uid, aulas) => {
 };
 
 document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()=>go(b.dataset.page)));
-const grid=document.getElementById('letterGrid');letters.forEach((l,i)=>{const b=document.createElement('button');b.className='letter';b.innerHTML=`<span class="glyph" lang="he" dir="rtl">${l[0]}</span><span>${l[1]}</span>`;b.onclick=()=>{const d=document.getElementById('letterDetail');d.classList.remove('hidden');d.innerHTML=`<div class="big-hebrew" lang="he">${l[0]}</div><h2>${l[1]}</h2><p><strong>Transliteração:</strong> ${l[2]}</p><p>${l[3]}</p><button type="button" class="secondary audio-play" onclick="playAlphabetLetter(${i})">🔊 Ouvir o nome da letra</button><p class="audio-status" id="alphabetAudioStatus" role="status" aria-live="polite"></p><p class="audio-help">Áudio pré-gerado em hebraico. Ouça o nome da letra. A tradição histórica de pronúncia pode apresentar diferenças.</p>`;playAlphabetLetter(i);d.scrollIntoView({behavior:'smooth',block:'nearest'})};grid.appendChild(b)});
+const grid=document.getElementById('letterGrid');letters.forEach((l,i)=>{const b=document.createElement('button');b.className='letter';b.innerHTML=`<span class="glyph" lang="he" dir="rtl">${l[0]}</span><span>${l[1]}</span>`;b.onclick=()=>{const d=document.getElementById('letterDetail');d.classList.remove('hidden');d.innerHTML=`<div class="big-hebrew" lang="he">${l[0]}</div><h2>${l[1]}</h2><p><strong>Transliteração:</strong> ${l[2]}</p><p>${l[3]}</p><button type="button" class="secondary audio-play" onclick="playAlphabetLetter(${i})">🔊 Ouvir o nome da letra</button><p class="audio-status" id="alphabetAudioStatus" role="status" aria-live="polite"></p><p class="audio-help">Áudio em hebraico guardado no BET. Ouça o nome da letra. As tradições históricas de pronúncia podem apresentar diferenças.</p>`;playAlphabetLetter(i);d.scrollIntoView({behavior:'smooth',block:'nearest'})};grid.appendChild(b)});
 function renderLessons(){document.getElementById('lessonList').innerHTML=lessons.map((l,i)=>`<button class="lesson" onclick="openLesson(${i})"><strong>${completed.includes(i)?'✓ ':''}Aula ${i+1}: ${l.title}</strong><span>${l.subtitle}${completed.includes(i)?' · Concluída':''}</span></button>`).join('');document.getElementById('progressText').textContent=`${completed.length} de ${lessons.length} aulas introdutórias concluídas.`;document.getElementById('progressBar').style.width=(completed.length/lessons.length*100)+'%';document.querySelector('.journey-card .progress')?.setAttribute('aria-valuenow',String(completed.length))}
 function answerAlefBet(button){
   const card=button.closest('[data-ab-activity]');
