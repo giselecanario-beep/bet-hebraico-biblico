@@ -354,6 +354,40 @@ main{max-width:1020px;padding:28px 20px 72px}
 @media(max-width:385px){.lesson{flex-wrap:wrap}.brand-monogram{display:none}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition-duration:.01ms!important}.lesson:hover,.primary:hover:not(:disabled){transform:none}}
 
+
+/* Introducao ao niqqud: cinco sons e historia massoretica */
+.vowel-context{border-left:4px solid var(--wine);padding:25px}
+.vowel-context h2,.vowel-more h2,.vowel-history h2,.vowel-mini-quiz h2{font:700 clamp(23px,4vw,29px)/1.25 Georgia,serif;color:var(--wine);margin:0 0 13px}
+.vowel-example{display:grid;grid-template-columns:135px 1fr;align-items:center;gap:22px;padding:12px 0}
+.vowel-example-hebrew{background:#f5eae1;border:1px solid var(--line);border-radius:11px;text-align:center;color:var(--wine);font:clamp(68px,13vw,92px)/1.4 'Times New Roman',serif;padding:10px}
+.vowel-example strong{font:700 19px/1.4 Georgia,serif;color:var(--wine)}
+.vowel-example p{font:16px/1.6 Arial,sans-serif;margin:8px 0}
+.vowel-context-note{font:15px/1.65 Arial,sans-serif;color:var(--muted);margin:12px 0 0}
+.vowel-section-heading{font:700 clamp(26px,4.5vw,32px)/1.2 Georgia,serif;color:var(--wine);margin:31px 0 12px}
+.vowel-help{font:15px/1.65 Arial,sans-serif;color:var(--muted);margin:12px 0 18px}
+.vowel-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin:20px 0 29px}
+.vowel-card{background:var(--paper);border:1px solid var(--line);border-radius:13px;padding:17px 9px;text-align:center;min-width:0;display:flex;align-items:center;flex-direction:column;box-shadow:0 3px 12px rgba(45,24,18,.03)}
+.vowel-latin{font:700 30px/1.1 Georgia,serif;color:var(--wine);background:#f1e6df;width:53px;height:53px;border-radius:50%;display:grid;place-items:center}
+.vowel-hebrew{font:clamp(65px,9vw,86px)/1.4 'Times New Roman',serif;color:var(--wine);margin:12px 0 6px}
+.vowel-card>strong{font:700 16px/1.4 Georgia,serif;color:var(--ink)}
+.vowel-card p{font:14px/1.5 Arial,sans-serif;color:var(--muted);margin:9px 0 15px;flex:1}
+.vowel-callout{font:700 12px/1.4 Arial,sans-serif;color:var(--wine);background:#f6ece3;border-radius:5px;padding:6px 8px}
+.vowel-other-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px;margin-top:15px}
+.vowel-other-grid>div{border:1px solid var(--line);border-radius:10px;background:#fffefa;padding:15px}
+.vowel-other-hebrew{font:69px/1.3 'Times New Roman',serif;text-align:center;color:var(--wine);margin-bottom:3px}
+.vowel-other-grid strong{font:700 17px/1.4 Georgia,serif;color:var(--wine)}
+.vowel-other-grid p{font:14px/1.6 Arial,sans-serif;color:var(--ink);margin:9px 0}
+.vowel-history{background:#f5ece4}
+.vowel-history p{font:16px/1.7 Arial,sans-serif;margin:13px 0}
+.vowel-mini-quiz>p:not(.feedback){font:17px/1.6 Arial,sans-serif}
+.vowel-quiz-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:14px}
+.vowel-quiz-options .choice{text-align:center;font:700 22px Georgia,serif;min-height:62px}
+.vowel-next{padding:16px 0 23px}
+.vowel-next p{font:17px/1.6 Georgia,serif}
+@media(max-width:850px){.vowel-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:580px){.vowel-context{padding:19px}.vowel-example{grid-template-columns:1fr;gap:9px}.vowel-example-hebrew{max-width:200px;margin:auto;width:100%}.vowel-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.vowel-other-grid{grid-template-columns:1fr}.vowel-card{padding:15px 8px}.vowel-card p{font-size:13px}.vowel-next .primary,.vowel-next .secondary{display:block;width:100%;margin:8px 0}}
+@media(max-width:360px){.vowel-grid{grid-template-columns:1fr}.vowel-card{display:grid;grid-template-columns:74px 1fr;text-align:left;column-gap:12px}.vowel-latin{grid-row:span 4}.vowel-hebrew{grid-row:1;grid-column:2;margin:0;font-size:60px}.vowel-card>strong,.vowel-card p,.vowel-card .vowel-callout{grid-column:2}}
+
 </style>
   
 </head>
@@ -508,7 +542,7 @@ document.getElementById("btn-recuperar")?.addEventListener("click", async () => 
   <button type="button" class="header-account" onclick="showAccountPanel()">Minha conta</button>
  </div>
 </header>
-<nav aria-label="Navegação"><button data-page="inicio" class="active">Início</button><button data-page="alfabeto">Alfabeto</button><button data-page="aulas">Aulas</button><button data-page="exercicios">Exercícios</button><button data-page="trilhas">Trilhas</button><button data-page="laboratorio">Laboratório</button><button data-page="testes">Avaliar teste</button></nav>
+<nav aria-label="Navegação"><button data-page="inicio" class="active">Início</button><button data-page="vogais">Vogais</button><button data-page="alfabeto">Alfabeto</button><button data-page="aulas">Aulas</button><button data-page="exercicios">Exercícios</button><button data-page="trilhas">Trilhas</button><button data-page="laboratorio">Laboratório</button><button data-page="testes">Avaliar teste</button></nav>
 <main>
 <section id="inicio" class="page">
  <div class="hero" aria-labelledby="hero-title">
@@ -537,7 +571,59 @@ document.getElementById("btn-recuperar")?.addEventListener("click", async () => 
  </section>
  <div class="beta-panel beta-invite"><div><span class="section-overline">VERSÃO EXPERIMENTAL</span><h2>Ajude a construir o BET</h2><p>Estamos ouvindo os primeiros estudantes. Experimente as cinco aulas e conte o que podemos melhorar.</p></div><button type="button" class="secondary" onclick="go('testes')">Participar dos testes</button></div>
 </section>
-<section id="alfabeto" class="page hidden"><h1>O alfabeto hebraico</h1><p>Conheça as 22 letras. Toque em cada uma para descobrir seu nome e uma indicação de pronúncia.</p><div class="grid" id="letterGrid"></div><div class="panel hidden" id="letterDetail" aria-live="polite"></div><p class="small">Alguns sons não têm equivalente exato no português. As transliterações são aproximações para iniciantes.</p></section>
+<section id="vogais" class="page hidden" aria-labelledby="vowels-title">
+  <span class="section-overline">ANTES DE CONHECER O ALFABETO</span>
+  <h1 id="vowels-title">Como funcionam as vogais no hebraico?</h1>
+  <p class="section-intro">Você já reparou nos tracinhos e pontinhos perto das letras hebraicas? Eles ajudam a reconhecer como as palavras devem ser lidas. Vamos começar pelos sons A, E, I, O e U.</p>
+  <div class="vowel-context panel">
+    <h2>Primeiro, uma descoberta</h2>
+    <div class="vowel-example">
+      <div class="vowel-example-hebrew" lang="he" dir="rtl">אָב</div>
+      <div><strong>Av</strong> significa <strong>pai</strong>.<p>O pequeno sinal <strong>ָ</strong>, colocado abaixo do Álef (<bdi lang="he">א</bdi>), chama-se <strong>qamats</strong>. Nesta palavra, ele indica a vogal <strong>a</strong>.</p></div>
+    </div>
+    <p class="vowel-context-note">As letras formam a base da escrita hebraica. Os sinais vocálicos, conhecidos como <strong>niqqud</strong>, são acrescentados às letras para orientar a leitura.</p>
+  </div>
+  <section aria-labelledby="vowels-five-heading">
+    <h2 id="vowels-five-heading" class="vowel-section-heading">Cinco sons para começar</h2>
+    <p class="vowel-help">Observe o sinal junto ao Álef (<bdi lang="he">א</bdi>), usado aqui como apoio visual. São exemplos introdutórios: há mais de um sinal para algumas vogais e diferenças entre as tradições de pronúncia.</p>
+    <div class="vowel-grid">
+      <article class="vowel-card"><span class="vowel-latin" aria-label="Vogal A">A</span><div class="vowel-hebrew" lang="he" dir="rtl">אַ</div><strong>Pataḥ</strong><p>Um tracinho embaixo da letra.</p><span class="vowel-callout">Som de a</span></article>
+      <article class="vowel-card"><span class="vowel-latin" aria-label="Vogal E">E</span><div class="vowel-hebrew" lang="he" dir="rtl">אֶ</div><strong>Segol</strong><p>Três pontinhos sob a letra.</p><span class="vowel-callout">Som de e</span></article>
+      <article class="vowel-card"><span class="vowel-latin" aria-label="Vogal I">I</span><div class="vowel-hebrew" lang="he" dir="rtl">אִ</div><strong>Ḥiriq</strong><p>Um pontinho embaixo da letra.</p><span class="vowel-callout">Som de i</span></article>
+      <article class="vowel-card"><span class="vowel-latin" aria-label="Vogal O">O</span><div class="vowel-hebrew" lang="he" dir="rtl">אֹ</div><strong>Ḥolam</strong><p>Um pontinho acima da letra.</p><span class="vowel-callout">Som de o</span></article>
+      <article class="vowel-card"><span class="vowel-latin" aria-label="Vogal U">U</span><div class="vowel-hebrew" lang="he" dir="rtl">אֻ</div><strong>Qibbuts</strong><p>Três pontinhos inclinados abaixo da letra.</p><span class="vowel-callout">Som de u</span></article>
+    </div>
+  </section>
+  <div class="panel vowel-more">
+    <h2>Mas por que há outros sinais?</h2>
+    <div class="vowel-other-grid">
+      <div><div class="vowel-other-hebrew" lang="he" dir="rtl">אָ</div><strong>Qamats</strong><p>Outro sinal que pode indicar <strong>a</strong>, como em <bdi lang="he" dir="rtl">אָב</bdi> (*av*, pai). Em certos contextos, um qamats pode representar <strong>o</strong>, por isso a palavra inteira importa.</p></div>
+      <div><div class="vowel-other-hebrew" lang="he" dir="rtl">אֵ</div><strong>Tsere</strong><p>Outro sinal associado ao som de <strong>e</strong> na leitura introdutória.</p></div>
+      <div><div class="vowel-other-hebrew" lang="he" dir="rtl">וּ</div><strong>Shuruk</strong><p>O Vav com ponto pode representar <strong>u</strong>, como em <bdi lang="he" dir="rtl">הוּא</bdi> (*hu*, ele). Este ponto não funciona aqui como o dagesh de <bdi lang="he">בּ</bdi>.</p></div>
+    </div>
+    <p class="vowel-help">Há outros sinais, como o <strong>shevá</strong>, que estudaremos aos poucos. Não é necessário memorizar todos agora.</p>
+  </div>
+  <section class="panel vowel-history" aria-labelledby="vowels-masoretes">
+    <span class="section-overline">UM POUCO DE HISTÓRIA</span>
+    <h2 id="vowels-masoretes">Quem colocou esses sinais?</h2>
+    <p>Durante muitos séculos, os textos hebraicos circularam principalmente com as consoantes, e sua leitura era transmitida também oralmente.</p>
+    <p>Entre aproximadamente os séculos <strong>VII e X da era comum</strong>, estudiosos judeus conhecidos como <strong>massoretas</strong> desenvolveram e aperfeiçoaram sistemas de sinais para registrar a tradição de leitura. O sistema de Tiberíades tornou-se o mais usado nas Bíblias hebraicas impressas.</p>
+    <p><strong>Eles não inventaram as vogais.</strong> Os sons já existiam na língua falada. Os sinais ajudaram a conservar e transmitir a leitura correta dos textos para gerações posteriores, incluindo pessoas que estavam aprendendo hebraico.</p>
+    <p class="vowel-help">Essa tradição é posterior à composição de muitos livros bíblicos. Por isso, estudamos tanto a história do texto quanto as formas como ele foi lido e transmitido.</p>
+  </section>
+  <section class="panel vowel-mini-quiz" aria-labelledby="vowel-mini-title">
+    <h2 id="vowel-mini-title">Vamos observar?</h2>
+    <p>Na palavra <bdi lang="he" dir="rtl">אָב</bdi> (*av*, pai), que vogal o sinal abaixo do Álef indica?</p>
+    <div class="vowel-quiz-options" role="group" aria-label="Escolha a vogal de av">
+      <button type="button" class="choice" data-vowel-correct="false" onclick="answerVowelIntro(this)">E</button>
+      <button type="button" class="choice" data-vowel-correct="true" onclick="answerVowelIntro(this)">A</button>
+      <button type="button" class="choice" data-vowel-correct="false" onclick="answerVowelIntro(this)">U</button>
+    </div>
+    <p class="feedback" id="vowelIntroFeedback" role="status" aria-live="polite"></p>
+  </section>
+  <div class="vowel-next"><p>Pronto para continuar? Agora vamos conhecer as letras que recebem esses sinais.</p><button type="button" class="primary" onclick="go('alfabeto')">Conhecer o alfabeto</button><button type="button" class="secondary" onclick="go('aulas');openLesson(0)">Começar a Aula 1</button></div>
+</section>
+<section id="alfabeto" class="page hidden"><h1>O alfabeto hebraico</h1><p>Conheça as 22 letras. Toque em cada uma para descobrir seu nome e uma indicação de pronúncia.</p><p class="small">Quer entender os sinais que acompanham as letras? <button type="button" class="secondary" onclick="go('vogais')">Ver as vogais A, E, I, O, U</button></p><div class="grid" id="letterGrid"></div><div class="panel hidden" id="letterDetail" aria-live="polite"></div><p class="small">Alguns sons não têm equivalente exato no português. As transliterações são aproximações para iniciantes.</p></section>
 <section id="aulas" class="page hidden">
  <span class="section-overline">MÓDULO INTRODUTÓRIO · GRATUITO</span>
  <h1>Suas cinco primeiras aulas</h1>
@@ -761,6 +847,23 @@ function showAccountPanel(){
  account.open=true;
  account.scrollIntoView({behavior:'smooth',block:'center'});
 }
+function answerVowelIntro(button){
+ const group=button.closest('.vowel-mini-quiz');
+ if(!group||group.dataset.solved==='true')return;
+ const correct=button.dataset.vowelCorrect==='true';
+ const feedback=document.getElementById('vowelIntroFeedback');
+ if(!feedback)return;
+ group.querySelectorAll('.choice').forEach(choice=>choice.classList.remove('correct','wrong'));
+ button.classList.add(correct?'correct':'wrong');
+ feedback.textContent=correct
+  ?'Isso mesmo! Em אָב (av, pai), o qamats sob o Álef indica a vogal a.'
+  :'Observe o sinal abaixo do Álef em אָב. Nesta palavra, o qamats indica a vogal a. Tente novamente!';
+ if(correct){
+  group.dataset.solved='true';
+  group.querySelectorAll('.choice').forEach(choice=>choice.disabled=true);
+ }
+}
+
 function go(page){document.querySelectorAll('.page').forEach(x=>x.classList.toggle('hidden',x.id!==page));document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('active',x.dataset.page===page));window.scrollTo({top:0,behavior:'smooth'});if(page==='exercicios'){if(!quiz.length)startQuiz();if(!listeningOrder.length)startListeningQuiz();}}
   
 function chaveProgresso() {
