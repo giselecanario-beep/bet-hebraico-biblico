@@ -190,12 +190,41 @@
 .zh-review{font:clamp(43px,9vw,78px)/1.6 'Times New Roman',serif;text-align:center;color:var(--wine);overflow-wrap:anywhere}
 @media(max-width:620px){.ab-letters.zh-letters,.ab-first-words.zh-words{grid-template-columns:1fr}.zh-compare{flex-direction:column}}
 
+
+/* BET: fase experimental das cinco aulas gratuitas */
+.beta-intro{max-width:900px;margin:18px auto;padding:22px;background:#fffaf4;border:1px solid #d6bcb0;border-radius:10px;color:var(--ink)}
+.beta-intro h1{font:700 clamp(24px,5vw,34px)/1.2 Georgia,serif;color:var(--wine);margin:10px 0}
+.beta-intro p{font:16px/1.6 Arial,sans-serif;margin:9px 0}
+.beta-intro .primary{margin:8px 0 0}
+.beta-label{display:inline-block;border-radius:6px;padding:6px 10px;background:#eee0d6;color:var(--wine);font:700 12px/1.4 Arial,sans-serif}
+.beta-help{font:14px/1.5 Arial,sans-serif;color:var(--muted)}
+.beta-optional{font:14px/1.5 Arial,sans-serif;color:var(--muted);margin:0}
+.beta-panel{padding:18px;border:1px solid var(--line);border-radius:10px;background:#fffaf4;margin:20px 0}
+.beta-panel h2{font-size:23px}
+.beta-guide{padding-left:23px;font:16px/1.65 Arial,sans-serif}
+.beta-guide li{margin:8px 0}
+.beta-form{display:grid;gap:12px}
+.beta-form label{font:600 15px/1.5 Arial,sans-serif}
+.beta-form select,.beta-form textarea{width:100%;font:15px/1.5 Arial,sans-serif;border-radius:6px;border:1px solid #bea99f;background:#fff;color:var(--ink);padding:12px;display:block;margin-top:6px}
+.beta-form textarea{resize:vertical;min-height:100px}
+.beta-form select:focus-visible,.beta-form textarea:focus-visible{outline:3px solid var(--wine);outline-offset:2px}
+.beta-status{font:600 14px/1.5 Arial,sans-serif;min-height:20px;color:var(--wine)}
+@media(max-width:560px){.beta-intro{margin:10px;padding:15px}.beta-intro .primary{width:100%}}
+
 </style>
   
 </head>
 <body>
+<section class="beta-intro" aria-labelledby="beta-heading">
+<span class="beta-label">FASE DE TESTES · CINCO AULAS GRATUITAS</span>
+<h1 id="beta-heading">Comece a aprender hebraico bíblico no BET</h1>
+<p>Experimente as cinco primeiras aulas, com exercícios interativos e ajuda da IA Gisele. <strong>Sem pagamento e sem cadastro obrigatório.</strong></p>
+<button type="button" class="primary" onclick="go('aulas');openLesson(0)">Começar gratuitamente</button>
+<p class="beta-help">Sem login, seu progresso fica neste navegador. Criar conta é opcional.</p>
+</section>
 <div id="login-area">
-  <h2>Entrar no BET</h2>
+  <h2>Conta opcional</h2>
+<p class="beta-optional">Se quiser usar uma conta para tentar sincronizar seu progresso entre aparelhos, entre ou cadastre-se. Para apenas testar, use o botão gratuito acima.</p>
   <input type="email" id="email" placeholder="Seu e-mail">
   <input type="password" id="senha" placeholder="Sua senha">
   <button id="btnEntrar">Entrar</button>
@@ -346,11 +375,30 @@ document.getElementById("btn-recuperar")?.addEventListener("click", async () => 
 </script>
 
   <header><div class="brand">BET</div><div class="sub">HEBRAICO BÍBLICO</div></header>
-<nav aria-label="Navegação"><button data-page="inicio" class="active">Início</button><button data-page="alfabeto">Alfabeto</button><button data-page="aulas">Aulas</button><button data-page="exercicios">Exercícios</button><button data-page="trilhas">Trilhas</button><button data-page="laboratorio">Laboratório</button></nav>
+<nav aria-label="Navegação"><button data-page="inicio" class="active">Início</button><button data-page="alfabeto">Alfabeto</button><button data-page="aulas">Aulas</button><button data-page="exercicios">Exercícios</button><button data-page="trilhas">Trilhas</button><button data-page="laboratorio">Laboratório</button><button data-page="testes">Avaliar teste</button></nav>
 <main>
-<section id="inicio" class="page"><h1>Bem-vindo ao BET</h1><p>Uma jornada pela língua dos textos bíblicos. Aprenda o alfabeto, descubra palavras e avance no seu ritmo.</p><button class="primary" onclick="go('aulas');openLesson(0)">Começar a aprender</button><div class="panel"><h2>Seu percurso</h2><p class="small" id="progressText">Seu progresso aparecerá aqui.</p><div class="progress"><div id="progressBar"></div></div><button class="secondary" onclick="go('aulas')">Ver as aulas</button></div><button class="secondary" onclick="go('trilhas')">Conhecer as seis trilhas</button><h2>O que você vai aprender?</h2><p>Reconhecer as 22 letras, compreender a escrita da direita para a esquerda, ler palavras bíblicas e praticar com exercícios.</p></section>
+<section id="inicio" class="page"><span class="beta-label">Cinco aulas gratuitas · versão experimental</span><h1>Bem-vindo ao BET</h1><p>Uma jornada pela língua dos textos bíblicos. Teste as cinco aulas introdutórias gratuitamente e avance no seu ritmo.</p><button class="primary" onclick="go('aulas');openLesson(0)">Começar as aulas gratuitas</button><div class="panel"><h2>Seu percurso</h2><p class="small" id="progressText">Seu progresso aparecerá aqui.</p><div class="progress"><div id="progressBar"></div></div><button class="secondary" onclick="go('aulas')">Ver as aulas</button></div><button class="secondary" onclick="go('trilhas')">Conhecer as seis trilhas</button>
+<div class="beta-panel"><h2>Participe dos nossos testes</h2><p class="small">Aprenda, teste os exercícios e nos conte o que pode melhorar.</p><button class="secondary" onclick="go('testes')">Como participar e avaliar</button></div><h2>O que você vai aprender?</h2><p>Reconhecer as 22 letras, compreender a escrita da direita para a esquerda, ler palavras bíblicas e praticar com exercícios.</p></section>
 <section id="alfabeto" class="page hidden"><h1>O alfabeto hebraico</h1><p>Conheça as 22 letras. Toque em cada uma para descobrir seu nome e uma indicação de pronúncia.</p><div class="grid" id="letterGrid"></div><div class="panel hidden" id="letterDetail" aria-live="polite"></div><p class="small">Alguns sons não têm equivalente exato no português. As transliterações são aproximações para iniciantes.</p></section>
-<section id="aulas" class="page hidden"><h1>Suas aulas</h1><p>Um caminho introdutório para começar a ler hebraico bíblico.</p><div id="lessonList"></div><article class="panel hidden" id="lessonView"></article></section>
+<section id="aulas" class="page hidden"><h1>Suas aulas</h1><p><strong>As cinco aulas estão liberadas gratuitamente nesta fase de testes.</strong> Estude no seu ritmo, sem precisar cadastrar uma conta.</p><div id="lessonList"></div><article class="panel hidden" id="lessonView"></article><div class="beta-panel"><h2>Terminou de testar?</h2><p class="small">Conte o que gostou e o que precisa melhorar.</p><button class="secondary" onclick="go('testes')">Avaliar minha experiência</button></div></section>
+<section id="testes" class="page hidden" aria-labelledby="beta-test-title">
+ <span class="beta-label">Participação gratuita · versão experimental</span>
+ <h1 id="beta-test-title">Ajude a melhorar o BET</h1>
+ <p>Queremos ouvir os primeiros estudantes das cinco aulas introdutórias.</p>
+ <ol class="beta-guide"><li>Abra as cinco aulas e experimente os desafios.</li><li>Teste a seção <strong>Escute e repita</strong>. A voz hebraica depende do aparelho.</li><li>Faça perguntas à <strong>IA Gisele</strong>, que ainda trabalha com respostas guiadas.</li><li>Conte o que funcionou bem e o que podemos melhorar.</li></ol>
+ <button type="button" class="secondary" onclick="go('aulas');openLesson(0)">Voltar à primeira aula</button>
+ <div class="panel"><h2>Minha avaliação</h2><p class="small">Não inclua nome, e-mail, telefone ou dados pessoais. Esta página não envia dados automaticamente.</p>
+ <div class="beta-form">
+  <label for="beta-count">Quantas aulas experimentou?<select id="beta-count"><option>Ainda não testei</option><option>1 aula</option><option>2 aulas</option><option>3 aulas</option><option>4 aulas</option><option>5 aulas</option></select></label>
+  <label for="beta-ease">Conseguiu entender e usar os exercícios?<select id="beta-ease"><option>Não avaliei</option><option>Sim, foi fácil</option><option>Em parte</option><option>Tive dificuldades</option></select></label>
+  <label for="beta-audio">O áudio hebraico funcionou?<select id="beta-audio"><option>Não testei o áudio</option><option>Funcionou</option><option>Funcionou parcialmente</option><option>Não funcionou</option></select></label>
+  <label for="beta-notes">O que gostou? O que deve melhorar?<textarea id="beta-notes" maxlength="900" placeholder="Ex.: Gostei dos exercícios, mas não consegui ouvir uma das palavras."></textarea></label>
+  <button type="button" class="primary" onclick="copyBetaFeedback()">Copiar avaliação para compartilhar</button>
+  <p id="beta-feedback-status" class="beta-status" role="status" aria-live="polite"></p>
+  <label id="beta-report-label" class="hidden" for="beta-report">Mensagem pronta para enviar<textarea id="beta-report" readonly rows="8"></textarea></label>
+ </div><p class="beta-help">A mensagem é preparada neste navegador. Envie pelo mesmo canal em que recebeu o convite para testar o BET.</p></div>
+ <p class="beta-help">Sem conta, o progresso fica no navegador. Com conta opcional, o BET usa Firebase para autenticação e sincronização do progresso. A versão também utiliza ferramentas de medição de uso do Firebase/Google. Os próximos módulos ainda estão em desenvolvimento.</p>
+</section>
 <section id="exercicios" class="page hidden">
 <h1>Vamos praticar?</h1>
 <p>Treine o alfabeto e descubra palavras bíblicas pela escuta.</p>
@@ -505,6 +553,28 @@ function switchPracticeMode(mode){
   document.getElementById('chooseLetters').setAttribute('aria-pressed',String(mode==='letters'));
   document.getElementById('chooseListening').setAttribute('aria-pressed',String(mode==='listening'));
   if(mode!=='listening'&&'speechSynthesis' in window)window.speechSynthesis.cancel();
+}
+
+
+function copyBetaFeedback(){
+ const get=id=>document.getElementById(id);
+ const report='BET | Avaliação das cinco aulas gratuitas\n'+
+  'Aulas experimentadas: '+get('beta-count').value+'\n'+
+  'Uso e exercícios: '+get('beta-ease').value+'\n'+
+  'Áudio hebraico: '+get('beta-audio').value+'\n'+
+  'Comentários: '+(get('beta-notes').value.trim()||'Sem observações');
+ const output=get('beta-report');
+ output.value=report;
+ get('beta-report-label').classList.remove('hidden');
+ const status=get('beta-feedback-status');
+ status.textContent='Mensagem pronta. Copie e envie a quem lhe convidou.';
+ if(navigator.clipboard && navigator.clipboard.writeText){
+  navigator.clipboard.writeText(report)
+   .then(()=>{status.textContent='Avaliação copiada! Agora é só enviar a quem lhe convidou.';})
+   .catch(()=>{output.focus();output.select();status.textContent='Selecione e copie a mensagem abaixo para compartilhar.';});
+ }else{
+  output.focus();output.select();
+ }
 }
 
 function go(page){document.querySelectorAll('.page').forEach(x=>x.classList.toggle('hidden',x.id!==page));document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('active',x.dataset.page===page));window.scrollTo({top:0,behavior:'smooth'});if(page==='exercicios'){if(!quiz.length)startQuiz();if(!listeningOrder.length)startListeningQuiz();}}
@@ -908,7 +978,7 @@ if (window.betUsuarioId) {
   });
 }
 
-}catch(e){}}renderLessons();if(i+1<lessons.length)openLesson(i+1);else{document.getElementById('lessonView').innerHTML='<h2>Parabéns!</h2><p>Você concluiu as aulas introdutórias disponíveis. Continue praticando o alfabeto.</p><button class="primary" onclick="go(\'exercicios\')">Fazer exercícios</button>'}}
+}catch(e){}}renderLessons();if(i+1<lessons.length)openLesson(i+1);else{document.getElementById('lessonView').innerHTML='<h2>Parabéns!</h2><p>Você concluiu as cinco aulas introdutórias gratuitas! Continue praticando e compartilhe sua experiência de teste.</p><button class="primary" onclick="go(\'exercicios\')">Fazer exercícios</button><button class="secondary" onclick="go(\'testes\')">Avaliar as cinco aulas</button>'}}
 
 /* Reconhecimento auditivo: a resposta só aparece após o aluno escolher. */
 const listeningWords=[
@@ -1013,16 +1083,5 @@ let quiz=[],qIndex=0,score=0,answered=false;function startQuiz(){quiz=[...letter
 function showQuestion(){answered=false;document.getElementById('quizNext').classList.add('hidden');document.getElementById('quizFeedback').textContent='';if(qIndex>=quiz.length){document.getElementById('quizCount').textContent='Resultado';document.getElementById('quizGlyph').textContent='✓';document.getElementById('quizQuestion').textContent=`Você acertou ${score} de ${quiz.length} perguntas.`;document.getElementById('quizChoices').innerHTML='';document.getElementById('quizNext').textContent='Tentar novamente';document.getElementById('quizNext').onclick=startQuiz;document.getElementById('quizNext').classList.remove('hidden');return}document.getElementById('quizNext').textContent='Próxima pergunta';document.getElementById('quizNext').onclick=nextQuestion;const i=quiz[qIndex];document.getElementById('quizCount').textContent=`Pergunta ${qIndex+1} de ${quiz.length}`;document.getElementById('quizGlyph').textContent=letters[i][0];document.getElementById('quizQuestion').textContent='Qual é o nome desta letra?';const options=[i,...letters.map((_,n)=>n).filter(n=>n!==i).sort(()=>Math.random()-.5).slice(0,3)].sort(()=>Math.random()-.5);document.getElementById('quizChoices').innerHTML='';options.forEach(n=>{const b=document.createElement('button');b.className='choice';b.textContent=letters[n][1];b.onclick=()=>answer(n,i);document.getElementById('quizChoices').appendChild(b)})}
 function answer(chosen,correct){if(answered)return;answered=true;if(chosen===correct)score++;document.querySelectorAll('#quizChoices .choice').forEach(b=>{b.disabled=true;if(b.textContent===letters[correct][1])b.classList.add('correct');else if(b.textContent===letters[chosen][1])b.classList.add('wrong')});document.getElementById('quizFeedback').textContent=chosen===correct?'Muito bem! Resposta correta.':`A resposta correta é ${letters[correct][1]}.`;document.getElementById('quizNext').classList.remove('hidden')}
 function nextQuestion(){qIndex++;showQuestion()}renderLessons();
-</script><div style="text-align:center; padding:25px;">
-  <h2>Continue aprendendo com o BET</h2>
-  <p>7 dias grátis e depois R$ 19,90 por mês.</p>
-  <a href="https://mpago.la/1D3vZWm"
-     target="_blank"
-     rel="noopener noreferrer"
-     style="display:inline-block;background:#751f32;
-     color:white;padding:14px 24px;
-     border-radius:8px;text-decoration:none;">
-    Assinar BET Completo
-  </a>
-</div>
+</script><div class="beta-panel" style="max-width:820px;margin:20px auto;text-align:center"><h2>BET | Módulo introdutório gratuito</h2><p>As cinco primeiras aulas são gratuitas nesta fase de testes. Não há cobrança para participar.</p></div>
 </body></html>
