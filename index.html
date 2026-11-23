@@ -912,20 +912,14 @@ function playBetRecording(source,label,statusId,start=0,end=null){
  file.preload='auto';
  file.src=source;
  const isSegment=Number.isFinite(end)&&end>start;
- let started=false;
- const begin=()=>{
-  if(id!==betAudioRequest || started)return;
-  started=true;
-  if(isSegment){
-   try{file.currentTime=Math.max(0,start-0.07)}catch(e){}
-  }
-  const promise=file.play();
-  if(promise&&typeof promise.catch==='function'){
-   promise.catch(()=>update('Não foi possível reproduzir a gravação em hebraico. Confira a conexão e toque novamente.'));
-  }
- };
  if(isSegment){
-  file.addEventListener('loadedmetadata',begin,{once:true});
+  // Configurar o recorte antes da reprodução, sem aguardar outro gesto no Android.
+  const seek=()=>{
+   if(id!==betAudioRequest)return;
+   try{file.currentTime=Math.max(0,start-0.07)}catch(e){}
+  };
+  file.addEventListener('loadedmetadata',seek,{once:true});
+  if(file.readyState>=1)seek();
   file.addEventListener('timeupdate',()=>{
    if(id!==betAudioRequest)return;
    if(file.currentTime>=end){
@@ -933,12 +927,12 @@ function playBetRecording(source,label,statusId,start=0,end=null){
     update('Fim da escuta em hebraico. Toque novamente para repetir.');
    }
   });
-  if(file.readyState>=1)begin();
-  else {
-   // Usar o clique do estudante para iniciar o carregamento e evitar leitura automática.
-   try{file.load()}catch(e){}
-  }
- }else begin();
+ }
+ // O play() acontece diretamente no toque do estudante, necessário em celulares.
+ const promise=file.play();
+ if(promise&&typeof promise.catch==='function'){
+  promise.catch(()=>update('Não foi possível reproduzir a gravação em hebraico. Confira a conexão e toque novamente.'));
+ }
  file.addEventListener('ended',()=>update('Fim da escuta em hebraico. Toque novamente para repetir.'));
  file.addEventListener('error',()=>update('Não foi possível carregar o áudio em hebraico. Confira sua conexão.'));
  update('Preparando áudio em hebraico: '+label+'.');
