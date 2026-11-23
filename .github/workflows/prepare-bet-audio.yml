@@ -1,0 +1,62 @@
+name: Preparar audios hebraicos locais BET
+on:
+  push:
+    branches:
+      - feature/bet-audio-self-host-20261123
+    paths:
+      - .github/workflows/prepare-bet-audio.yml
+permissions:
+  contents: write
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Baixar e validar arquivos de pronuncia
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p assets/audio
+          BASE='https://resource2.heygen.ai/text_to_speech/6e1f3db1c7b64bbab86f4b80ae0e40a9/330290724a1b470fb63153f34d4c0183'
+          ids=(
+            '1ac2b82376f64c66bde0a762edae57b5'
+            'fedd4c1712184c4fac070faacf8c1969'
+            '032a5b556c3a47358a9be2547f0cb014'
+            'df14a5d337d244ccb1ee847ca27f9caa'
+            '239254406fbd442f9945366ce8a6ff21'
+          )
+          names=(a e i o u)
+          for i in 0 1 2 3 4; do
+            curl -fSL --retry 2 --connect-timeout 10 --max-time 35 "$BASE/id=${ids[$i]}.mp3" -o "assets/audio/vogal-${names[$i]}.mp3"
+            ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1 "assets/audio/vogal-${names[$i]}.mp3"
+          done
+          curl -fSL --retry 2 --connect-timeout 10 --max-time 35 "$BASE/id=5bc56ababa574278affea02666ce920f.wav" -o /tmp/alfabeto.wav
+          curl -fSL --retry 2 --connect-timeout 10 --max-time 35 "$BASE/id=661b1547c1f642d8a3664eb72e34764b.wav" -o /tmp/palavras.wav
+          ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1 /tmp/alfabeto.wav
+          ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1 /tmp/palavras.wav
+          python3 - <<'PYTHON'
+          import subprocess
+          from pathlib import Path
+          letters=[.299,1.024,1.792,2.56,3.285,3.84,4.48,5.163,5.931,6.741,7.381,8.085,8.725,9.365,10.005,10.73,11.456,12.01,12.821,13.461,13.845,14.869]
+          words=[.299,.939,1.536,2.133,2.99,3.541]
+          def cut(src,starts,duration,prefix):
+              for i,start in enumerate(starts):
+                  begin=max(0,start-.07)
+                  until=(starts[i+1]-.10 if i+1<len(starts) else duration-.08)
+                  out=f"assets/audio/{prefix}-{i+1:02d}.mp3"
+                  subprocess.run(["ffmpeg","-nostdin","-hide_banner","-loglevel","error","-y","-ss",str(begin),"-i",src,"-t",str(max(.15,until-begin)),"-codec:a","libmp3lame","-q:a","4",out],check=True)
+                  if Path(out).stat().st_size<1000:raise ValueError(f"Audio too small: {out}")
+          cut("/tmp/alfabeto.wav",letters,15.64,"letra")
+          cut("/tmp/palavras.wav",words,4.188,"palavra")
+          PYTHON
+          ls -lh assets/audio
+      - name: Salvar audios no repositorio
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/audio/
+          git commit -m "Adicionar audios hebraicos em arquivos locais para o BET"
+          git push origin HEAD:feature/bet-audio-self-host-20261123
