@@ -776,7 +776,22 @@ function lessonAudioPanel(index){
     '</section>';
 }
 let activeHebrewSpeech = null;
+let hebrewSpeechRequestId = 0;
+let pendingHebrewVoiceCleanup = null;
+
+/* Nunca enviar texto hebraico para o sintetizador padrão do aparelho.
+   Algumas versões do Android devolvem [] em getVoices() até dispararem
+   voiceschanged. Aguardamos essa lista; sem voz he/iw, não reproduzimos. */
+function clearHebrewVoiceWait(){
+  if(pendingHebrewVoiceCleanup){
+    const cleanup=pendingHebrewVoiceCleanup;
+    pendingHebrewVoiceCleanup=null;
+    cleanup();
+  }
+}
 function stopHebrewAudio(){
+  hebrewSpeechRequestId++;
+  clearHebrewVoiceWait();
   if('speechSynthesis' in window)window.speechSynthesis.cancel();
   activeHebrewSpeech=null;
   const status=document.getElementById('lessonAudioStatus');
@@ -784,34 +799,85 @@ function stopHebrewAudio(){
 }
 function speakHebrew(text,label,statusId){
   const status=document.getElementById(statusId);
-  const message=(value)=>{if(status)status.textContent=value;};
+  const request=++hebrewSpeechRequestId;
+  clearHebrewVoiceWait();
+  const message=value=>{if(request===hebrewSpeechRequestId&&status)status.textContent=value;};
   if(!('speechSynthesis' in window) || !('SpeechSynthesisUtterance' in window)){
     message('Este navegador não oferece leitura em voz alta.');
     return;
   }
   const engine=window.speechSynthesis;
-  const available=engine.getVoices();
-  const hebrewVoice=available.find(v=>/^(he|iw)(-|_|$)/i.test(v.lang));
-  if(available.length && !hebrewVoice){
-    message('Não encontramos uma voz em hebraico neste aparelho. Instale/ative uma voz hebraica nas configurações de texto para fala e tente novamente.');
-    return;
-  }
   engine.cancel();
-  const speech=new SpeechSynthesisUtterance(text);
-  speech.lang='he-IL';
-  speech.rate=statusId==='vowelAudioStatus' ? 0.91 : ((document.getElementById(statusId === 'listeningAudioStatus' ? 'listeningSlow' : 'audioSlow')?.checked ?? true) ? 0.73 : 0.95);
-  speech.pitch=1;
-  if(hebrewVoice)speech.voice=hebrewVoice;
-  activeHebrewSpeech=speech;
-  speech.onend=()=>{if(activeHebrewSpeech===speech){activeHebrewSpeech=null;message('Fim da escuta. Você pode ouvir novamente.');}};
-  speech.onerror=()=>{if(activeHebrewSpeech===speech){activeHebrewSpeech=null;message('Não foi possível reproduzir. Confira a voz hebraica nas configurações do aparelho.');}};
-  try{
-    engine.speak(speech);
-    message('Reproduzindo: '+label+'. Escute e repita.');
-  }catch(error){
-    activeHebrewSpeech=null;
-    message('O áudio não está disponível neste navegador.');
+  activeHebrewSpeech=null;
+  const isHebrewVoice=voice=>voice&&/^(he|iw)([-_]|$)/i.test(voice.lang||'');
+  const findHebrewVoice=()=>{
+    try{return Array.from(engine.getVoices()||[]).find(isHebrewVoice)||null;}
+    catch(error){return null;}
+  };
+  const unavailable='Não encontramos uma voz em hebraico neste aparelho. Ative uma voz hebraica nas configurações de texto para fala do celular. Para evitar pronúncia errada, o BET não utiliza a voz em português.';
+  const play=voice=>{
+    if(request!==hebrewSpeechRequestId)return;
+    if(!isHebrewVoice(voice)){message(unavailable);return;}
+    engine.cancel();
+    const speech=new SpeechSynthesisUtterance(text);
+    speech.lang='he-IL';
+    speech.voice=voice; // obrigatório: nunca permitir seleção automática da voz padrão (pt-BR)
+    speech.rate=statusId==='vowelAudioStatus' ? 0.91 : ((document.getElementById(statusId === 'listeningAudioStatus' ? 'listeningSlow' : 'audioSlow')?.checked ?? true) ? 0.73 : 0.95);
+    speech.pitch=1;
+    activeHebrewSpeech=speech;
+    speech.onend=()=>{
+      if(activeHebrewSpeech===speech){
+        activeHebrewSpeech=null;
+        message('Fim da escuta em hebraico. Toque novamente para repetir.');
+      }
+    };
+    speech.onerror=()=>{
+      if(activeHebrewSpeech===speech){
+        activeHebrewSpeech=null;
+        message('Não foi possível reproduzir com a voz hebraica. Confira as configurações de voz do aparelho.');
+      }
+    };
+    try{
+      engine.speak(speech);
+      message('Reproduzindo em hebraico: '+label+'. Escute e repita.');
+    }catch(error){
+      activeHebrewSpeech=null;
+      message('O áudio em hebraico não está disponível neste navegador.');
+    }
+  };
+  const now=findHebrewVoice();
+  if(now){play(now);return;}
+  message('Procurando uma voz hebraica no aparelho...');
+  let settled=false;
+  let timer=null;
+  let previousHandler=null;
+  const onVoicesChanged=()=>{
+    if(request!==hebrewSpeechRequestId)return;
+    const voice=findHebrewVoice();
+    if(!voice||settled)return;
+    settled=true;
+    clearHebrewVoiceWait();
+    play(voice);
+  };
+  if(typeof engine.addEventListener==='function'){
+    engine.addEventListener('voiceschanged',onVoicesChanged);
+  }else if('onvoiceschanged' in engine){
+    previousHandler=engine.onvoiceschanged;
+    engine.onvoiceschanged=onVoicesChanged;
   }
+  pendingHebrewVoiceCleanup=()=>{
+    if(timer!==null)window.clearTimeout(timer);
+    if(typeof engine.removeEventListener==='function')engine.removeEventListener('voiceschanged',onVoicesChanged);
+    else if(previousHandler!==null || engine.onvoiceschanged===onVoicesChanged)engine.onvoiceschanged=previousHandler;
+  };
+  timer=window.setTimeout(()=>{
+    if(settled||request!==hebrewSpeechRequestId)return;
+    settled=true;
+    clearHebrewVoiceWait();
+    const voice=findHebrewVoice();
+    if(voice)play(voice);
+    else message(unavailable);
+  },1800);
 }
 function playLessonSound(lessonIndex,itemIndex){
   const item=lessonSounds[lessonIndex]?.[itemIndex];
