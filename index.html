@@ -124,6 +124,15 @@
 .tutor-form button{margin:0;padding:12px 17px;min-height:44px}
 .tutor-speak{font:600 13px Arial,sans-serif;margin:10px 0 2px 0;padding:10px 13px;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--wine)}
 @media(max-width:450px){.tutor-panel{padding:15px}.tutor-heading{font-size:20px}.tutor-form button{padding:11px}.tutor-bubble{max-width:100%}}
+
+/* Apresentação da IA Gisele em vídeo, primeira aula. */
+.tutor-video-intro{margin:18px 0;padding:16px;border:1px solid var(--line);border-radius:10px;background:#fff}
+.tutor-video-intro h4{font:bold 20px/1.3 Georgia,serif;color:var(--wine);margin:0 0 8px}
+.tutor-video-intro p{font:14px/1.55 Arial,sans-serif;color:var(--muted);margin:7px 0 12px}
+.tutor-video-intro video{display:block;width:100%;height:auto;max-height:440px;aspect-ratio:4/5;background:#1d1516;border-radius:7px;object-fit:contain}
+.tutor-video-link{display:inline-block;margin-top:12px;font:600 14px/1.5 Arial,sans-serif;color:var(--wine);text-decoration:underline;text-underline-offset:3px}
+.tutor-video-intro video:focus-visible,.tutor-video-link:focus-visible{outline:3px solid var(--wine);outline-offset:3px}
+
 </style>
   
 </head>
@@ -664,13 +673,30 @@ let lastTutorAnswer='';
 function tutorNormalize(value){
  return String(value).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
 }
+
+const iaGiseleIntroVideo = "https://files2.heygen.ai/aws_pacific/avatar_tmp/6e1f3db1c7b64bbab86f4b80ae0e40a9/015a83a166ef10e4e08747a826de1515.mp4?Expires=1795997662&Signature=T9zgFSa9pHJqe3FsRvOEmx8a9vgKBRDeCaKjamf5o1odM4X5jLQ3ZW3vkZXYkSRcTd7C-6GNMM119m4olHK1oX~A0~ACqmDw8J04T2m3xzndGW04zAOuETLQi7x~at9Q0SGKqGe41W9-dd6Mpd2~xMganZbJSIH8SP0tD1ZRe7dTv0Df6c3WdY6Q1RfbLEBFEgMXN9yCyUrfY~UwpKy0jEdal4UXkunNhHw7RyEErR9xNKnk-hAcPrUhAibay15wfoPrM-ymC-z0se8fm3b6qxtb3VT6w3b~ZFSM3SCqqhQfVmk9pkbYkdoUXbHsmuaaQa-YChOFTC90HAQRGlhDlg__&Key-Pair-Id=K3TSZ3KU01LY58";
+const iaGiseleHeyGenPage = "https://app.heygen.com/videos/015a83a166ef10e4e08747a826de1515";
+function tutorVideoIntro(index){
+ if(index!==0)return '';
+ const videoSource=iaGiseleIntroVideo.replaceAll('&','&amp;').replaceAll('"','&quot;');
+ return '<div class="tutor-video-intro" aria-labelledby="iaGiseleVideoTitle">'+
+   '<h4 id="iaGiseleVideoTitle">Conheça a IA Gisele em vídeo</h4>'+
+   '<p>Uma apresentação com a imagem virtual e a voz original da professora Gisele. Toque para reproduzir; o vídeo não responde às perguntas em tempo real.</p>'+
+   '<video controls playsinline preload="none" controlslist="nodownload" aria-label="Vídeo de apresentação da IA Gisele com voz original">'+
+   '<source src="'+videoSource+'" type="video/mp4" />Seu navegador não conseguiu reproduzir o vídeo.</video>'+
+   '<a class="tutor-video-link" href="'+iaGiseleHeyGenPage+'" target="_blank" rel="noopener noreferrer">Assistir à apresentação no HeyGen</a>'+
+   '<p class="tutor-caption">Prévia com link de reprodução temporário. Se o vídeo não abrir aqui, use o acesso ao HeyGen acima.</p>'+
+   '</div>';
+}
+
 function tutorPanel(index){
  if(!tutorLessons[index])return '';
  return '<section class="panel tutor-panel" id="lessonTutor" aria-labelledby="tutorHeading">'+
    '<div class="tutor-header"><div class="tutor-mark" aria-hidden="true">G</div><div>'+
    '<h3 id="tutorHeading" class="tutor-heading">IA Gisele</h3>'+
    '<div class="tutor-kicker">Converse durante a aula · experiência guiada</div></div></div>'+
-   '<p class="tutor-caption">Protótipo com respostas preparadas para esta aula. Ainda não é uma conversa livre com inteligência artificial nem usa a voz clonada da professora.</p>'+
+   tutorVideoIntro(index)+
+   '<p class="tutor-caption">Protótipo com respostas preparadas para esta aula. A apresentação em vídeo usa a voz original da professora; as respostas abaixo usam a voz sintetizada do aparelho. A conversa ainda não é livre nem acontece em vídeo.</p>'+
    '<div id="tutorChat" class="tutor-chat" role="log" aria-live="polite" aria-relevant="additions" aria-label="Conversa com a tutora"></div>'+
    '<div id="tutorQuick" class="tutor-quick" aria-label="Sugestões de dúvidas"></div>'+
    '<form class="tutor-form" onsubmit="return askTutorForm(event)">'+
