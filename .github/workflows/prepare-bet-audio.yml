@@ -31,26 +31,37 @@ jobs:
           names=(a e i o u)
           for i in 0 1 2 3 4; do
             curl -fSL --retry 2 --connect-timeout 10 --max-time 35 "$BASE/id=${ids[$i]}.mp3" -o "assets/audio/vogal-${names[$i]}.mp3"
-            ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1 "assets/audio/vogal-${names[$i]}.mp3"
+            test "$(wc -c < "assets/audio/vogal-${names[$i]}.mp3")" -gt 1500
           done
           curl -fSL --retry 2 --connect-timeout 10 --max-time 35 "$BASE/id=5bc56ababa574278affea02666ce920f.wav" -o /tmp/alfabeto.wav
           curl -fSL --retry 2 --connect-timeout 10 --max-time 35 "$BASE/id=661b1547c1f642d8a3664eb72e34764b.wav" -o /tmp/palavras.wav
-          ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1 /tmp/alfabeto.wav
-          ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1 /tmp/palavras.wav
+          test "$(wc -c < /tmp/alfabeto.wav)" -gt 10000
+          test "$(wc -c < /tmp/palavras.wav)" -gt 10000
           python3 - <<'PYTHON'
-          import subprocess
           from pathlib import Path
+          import wave
           letters=[.299,1.024,1.792,2.56,3.285,3.84,4.48,5.163,5.931,6.741,7.381,8.085,8.725,9.365,10.005,10.73,11.456,12.01,12.821,13.461,13.845,14.869]
           words=[.299,.939,1.536,2.133,2.99,3.541]
-          def cut(src,starts,duration,prefix):
-              for i,start in enumerate(starts):
-                  begin=max(0,start-.07)
-                  until=(starts[i+1]-.10 if i+1<len(starts) else duration-.08)
-                  out=f"assets/audio/{prefix}-{i+1:02d}.mp3"
-                  subprocess.run(["ffmpeg","-nostdin","-hide_banner","-loglevel","error","-y","-ss",str(begin),"-i",src,"-t",str(max(.15,until-begin)),"-codec:a","libmp3lame","-q:a","4",out],check=True)
-                  if Path(out).stat().st_size<1000:raise ValueError(f"Audio too small: {out}")
-          cut("/tmp/alfabeto.wav",letters,15.64,"letra")
-          cut("/tmp/palavras.wav",words,4.188,"palavra")
+          def cut(src,starts,prefix):
+              with wave.open(src,'rb') as input:
+                  params=input.getparams()
+                  assert params.nchannels in (1,2)
+                  assert params.sampwidth in (1,2,3,4)
+                  rate=params.framerate
+                  total=input.getnframes()
+                  for i,start in enumerate(starts):
+                      begin=max(0,int((start-.07)*rate))
+                      until=int((starts[i+1]-.10)*rate) if i+1<len(starts) else total-int(.08*rate)
+                      until=min(total,max(until,begin+int(.15*rate)))
+                      input.setpos(begin)
+                      frames=input.readframes(until-begin)
+                      out=Path(f"assets/audio/{prefix}-{i+1:02d}.wav")
+                      with wave.open(str(out),'wb') as output:
+                          output.setparams(params)
+                          output.writeframes(frames)
+                      if out.stat().st_size<1500:raise ValueError(str(out))
+          cut("/tmp/alfabeto.wav",letters,"letra")
+          cut("/tmp/palavras.wav",words,"palavra")
           PYTHON
           ls -lh assets/audio
       - name: Salvar audios no repositorio
