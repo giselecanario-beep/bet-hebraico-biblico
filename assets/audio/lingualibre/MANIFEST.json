@@ -28,5 +28,65 @@
     "author": "Uziel302",
     "commons_page": "https://commons.wikimedia.org/wiki/File:LL-Q9288_(heb)-Uziel302-%D7%93.wav",
     "bytes": 92972
+  },
+  {
+    "index": 4,
+    "letter": "ה",
+    "file": "assets/audio/lingualibre/letra-05.wav",
+    "title": "File:LL-Q9288 (heb)-Uziel302-ה.wav",
+    "license": "CC0",
+    "author": "Uziel302",
+    "commons_page": "https://commons.wikimedia.org/wiki/File:LL-Q9288_(heb)-Uziel302-%D7%94.wav",
+    "bytes": 84780
+  },
+  {
+    "index": 6,
+    "letter": "ז",
+    "file": "assets/audio/lingualibre/letra-07.wav",
+    "title": "File:LL-Q9288 (heb)-Uziel302-ז.wav",
+    "license": "CC0",
+    "author": "Uziel302",
+    "commons_page": "https://commons.wikimedia.org/wiki/File:LL-Q9288_(heb)-Uziel302-%D7%96.wav",
+    "bytes": 84780
+  },
+  {
+    "index": 7,
+    "letter": "ח",
+    "file": "assets/audio/lingualibre/letra-08.wav",
+    "title": "File:LL-Q9288 (heb)-Uziel302-ח.wav",
+    "license": "CC0",
+    "author": "Uziel302",
+    "commons_page": "https://commons.wikimedia.org/wiki/File:LL-Q9288_(heb)-Uziel302-%D7%97.wav",
+    "bytes": 68396
+  },
+  {
+    "index": 8,
+    "letter": "ט",
+    "file": "assets/audio/lingualibre/letra-09.wav",
+    "title": "File:LL-Q9288 (heb)-Uziel302-ט.wav",
+    "license": "CC0",
+    "author": "Uziel302",
+    "commons_page": "https://commons.wikimedia.org/wiki/File:LL-Q9288_(heb)-Uziel302-%D7%98.wav",
+    "bytes": 76588
+  },
+  {
+    "index": 9,
+    "letter": "י",
+    "file": "assets/audio/lingualibre/letra-10.wav",
+    "title": "File:LL-Q9288 (heb)-Uziel302-י.wav",
+    "license": "CC0",
+    "author": "Uziel302",
+    "commons_page": "https://commons.wikimedia.org/wiki/File:LL-Q9288_(heb)-Uziel302-%D7%99.wav",
+    "bytes": 76588
+  },
+  {
+    "index": 10,
+    "letter": "כ",
+    "file": "assets/audio/lingualibre/letra-11.wav",
+    "title": "File:LL-Q9288 (heb)-Uziel302-כ.wav",
+    "license": "CC0",
+    "author": "Uziel302",
+    "commons_page": "https://commons.wikimedia.org/wiki/File:LL-Q9288_(heb)-Uziel302-%D7%9B.wav",
+    "bytes": 68396
   }
 ]
