@@ -32,10 +32,10 @@ jobs:
           pending=[(i,l) for i,l in enumerate(letters) if l not in known]
           print('ALREADY SAVED',len(known),'PENDING',len(pending),flush=True)
           def fetch(url,params=None,stream=False):
-              for attempt in range(6):
+              for attempt in range(5):
                   response=sess.get(url,params=params,timeout=35,stream=stream)
                   if response.status_code in (429,503):
-                      pause=min(90, 6*(2**attempt))
+                      pause=min(120, 12*(2**attempt))
                       print('THROTTLED',response.status_code,'backoff seconds',pause,flush=True)
                       response.close()
                       time.sleep(pause)
@@ -85,7 +85,7 @@ jobs:
                   break
               finally:
                   manifest_file.write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n',encoding='utf8')
-                  time.sleep(3)
+                  time.sleep(15)
           manifest.sort(key=lambda x:x['index'])
           manifest_file.write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n',encoding='utf8')
           print('TOTAL VERIFIED',len(manifest),'of 22',flush=True)
