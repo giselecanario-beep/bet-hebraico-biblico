@@ -1,0 +1,32 @@
+[
+  {
+    "index": 0,
+    "letter": "א",
+    "file": "assets/audio/lingualibre/letra-01.wav",
+    "title": "File:LL-Q9288 (heb)-Uziel302-א.wav",
+    "license": "CC0",
+    "author": "Uziel302",
+    "commons_page": "https://commons.wikimedia.org/wiki/File:LL-Q9288_(heb)-Uziel302-%D7%90.wav",
+    "bytes": 84780
+  },
+  {
+    "index": 2,
+    "letter": "ג",
+    "file": "assets/audio/lingualibre/letra-03.wav",
+    "title": "File:LL-Q9288 (heb)-Uziel302-ג.wav",
+    "license": "CC0",
+    "author": "Uziel302",
+    "commons_page": "https://commons.wikimedia.org/wiki/File:LL-Q9288_(heb)-Uziel302-%D7%92.wav",
+    "bytes": 84780
+  },
+  {
+    "index": 3,
+    "letter": "ד",
+    "file": "assets/audio/lingualibre/letra-04.wav",
+    "title": "File:LL-Q9288 (heb)-Uziel302-ד.wav",
+    "license": "CC0",
+    "author": "Uziel302",
+    "commons_page": "https://commons.wikimedia.org/wiki/File:LL-Q9288_(heb)-Uziel302-%D7%93.wav",
+    "bytes": 92972
+  }
+]
