@@ -10,7 +10,7 @@ permissions:
 jobs:
   gather:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
@@ -21,50 +21,74 @@ jobs:
           set -euo pipefail
           mkdir -p assets/audio/lingualibre
           python3 - <<'PY'
-          import json
-          import requests
-          import urllib.parse
+          import json, time, requests, urllib.parse, random
           from pathlib import Path
           letters=list('אבגדהוזחטיכלמנסעפצקרשת')
           sess=requests.Session()
           sess.headers['User-Agent']='BET-Hebraico-Biblico/1.0 (educational pronunciation audit; github.com/giselecanario-beep/bet-hebraico-biblico)'
-          manifest=[]
-          for i,letter in enumerate(letters):
-              title=f'File:LL-Q9288 (heb)-Uziel302-{letter}.wav'
+          manifest_file=Path('assets/audio/lingualibre/MANIFEST.json')
+          manifest=json.loads(manifest_file.read_text(encoding='utf8')) if manifest_file.exists() else []
+          known={x['letter'] for x in manifest}
+          pending=[(i,l) for i,l in enumerate(letters) if l not in known]
+          print('ALREADY SAVED',len(known),'PENDING',len(pending),flush=True)
+          def fetch(url,params=None,stream=False):
+              for attempt in range(6):
+                  response=sess.get(url,params=params,timeout=35,stream=stream)
+                  if response.status_code in (429,503):
+                      pause=min(90, 6*(2**attempt))
+                      print('THROTTLED',response.status_code,'backoff seconds',pause,flush=True)
+                      response.close()
+                      time.sleep(pause)
+                      continue
+                  response.raise_for_status()
+                  return response
+              raise RuntimeError('Server rate limited all attempts; abort politely')
+          # Query metadata for all remaining letters once, avoiding per-letter bursts.
+          titles=[f'File:LL-Q9288 (heb)-Uziel302-{l}.wav' for i,l in pending]
+          q=fetch('https://commons.wikimedia.org/w/api.php',params={'action':'query','format':'json','prop':'imageinfo','iiprop':'url|extmetadata','titles':'|'.join(titles)})
+          pages=list(q.json()['query']['pages'].values())
+          info_by_letter={}
+          for page in pages:
+              info=page.get('imageinfo')
+              if info:
+                  full=page['title']
+                  letter=full.split('-')[-1].replace('.wav','')
+                  info_by_letter[letter]=info[0]
+          print('META FOUND',len(info_by_letter),'of',len(pending),flush=True)
+          for i,letter in pending:
+              item=info_by_letter.get(letter)
+              if not item:
+                  print('MISSING',i+1,letter,'no recording by source',flush=True)
+                  continue
+              meta=item.get('extmetadata',{})
+              license_name=meta.get('LicenseShortName',{}).get('value','')
+              if 'CC0' not in license_name.upper().replace('-',''):
+                  print('SKIP LICENSE',i+1,letter,repr(license_name),flush=True)
+                  continue
+              link=item.get('url','')
+              if not link.startswith('https://upload.wikimedia.org/'):
+                  print('SKIP ORIGIN',i+1,letter,flush=True)
+                  continue
               try:
-                  r=sess.get('https://commons.wikimedia.org/w/api.php',params={'action':'query','format':'json','prop':'imageinfo','iiprop':'url|extmetadata','titles':title},timeout=25)
-                  r.raise_for_status()
-                  pages=r.json()['query']['pages']
-                  page=next(iter(pages.values()))
-                  info=page.get('imageinfo')
-                  if not info:
-                      print('MISSING',i+1,letter,'no imageinfo')
-                      continue
-                  item=info[0]
-                  meta=item.get('extmetadata',{})
-                  license_name=meta.get('LicenseShortName',{}).get('value','')
-                  if 'CC0' not in license_name.upper().replace('-',''):
-                      print('SKIP license',i+1,letter,repr(license_name))
-                      continue
-                  link=item.get('url','')
-                  if not link.startswith('https://upload.wikimedia.org/'):
-                      print('SKIP unsafe origin',i+1,letter)
-                      continue
-                  audio=sess.get(link,timeout=45)
-                  audio.raise_for_status()
-                  body=audio.content
-                  if len(body)<3000 or body[:4]!=b'RIFF' or body[8:12]!=b'WAVE':
-                      print('SKIP invalid WAV',i+1,letter,len(body))
+                  response=fetch(link,stream=True)
+                  data=response.content
+                  response.close()
+                  if len(data)<3000 or data[:4]!=b'RIFF' or data[8:12]!=b'WAVE':
+                      print('SKIP WAV',i+1,letter,len(data),flush=True)
                       continue
                   path=Path(f'assets/audio/lingualibre/letra-{i+1:02d}.wav')
-                  path.write_bytes(body)
-                  manifest.append({'index':i,'letter':letter,'file':path.as_posix(),'title':title,'license':license_name,'author':'Uziel302','commons_page':'https://commons.wikimedia.org/wiki/'+urllib.parse.quote(title.replace(' ','_'),safe=':/()'),'bytes':len(body)})
-                  print('FOUND',i+1,letter,len(body),license_name)
-              except Exception as ex:
-                  print('ERROR',i+1,letter,str(ex)[:140])
-          Path('assets/audio/lingualibre/MANIFEST.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n',encoding='utf8')
-          print('TOTAL VERIFIED',len(manifest),'of 22')
-          if len(manifest)<1: raise RuntimeError('No verified recording available')
+                  path.write_bytes(data)
+                  manifest.append({'index':i,'letter':letter,'file':path.as_posix(),'title':f'File:LL-Q9288 (heb)-Uziel302-{letter}.wav','license':license_name,'author':'Uziel302','commons_page':'https://commons.wikimedia.org/wiki/'+urllib.parse.quote(f'File:LL-Q9288_(heb)-Uziel302-{letter}.wav',safe=':/()'),'bytes':len(data)})
+                  print('FOUND',i+1,letter,len(data),license_name,flush=True)
+              except Exception as err:
+                  print('STOP DUE TO DOWNLOAD ERROR',i+1,letter,str(err)[:180],flush=True)
+                  break
+              finally:
+                  manifest_file.write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n',encoding='utf8')
+                  time.sleep(3)
+          manifest.sort(key=lambda x:x['index'])
+          manifest_file.write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n',encoding='utf8')
+          print('TOTAL VERIFIED',len(manifest),'of 22',flush=True)
           PY
       - name: Guardar audios com manifest de fontes
         shell: bash
@@ -72,5 +96,6 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add assets/audio/lingualibre/
-          git commit -m "Importar gravacoes independentes de letras hebraicas CC0 verificadas"
+          git diff --cached --quiet && { echo "No new files to commit"; exit 0; }
+          git commit -m "Adicionar novas gravacoes CC0 Lingua Libre para nomes das letras"
           git push origin HEAD:feature/lingualibre-audios-20261124
