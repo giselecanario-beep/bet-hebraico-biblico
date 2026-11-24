@@ -1,0 +1,76 @@
+name: Buscar audios nativos Lingua Libre
+on:
+  push:
+    branches:
+      - feature/lingualibre-audios-20261124
+    paths:
+      - .github/workflows/import-lingualibre.yml
+permissions:
+  contents: write
+jobs:
+  gather:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Consultar Wikimedia Commons e validar origem e licenca
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p assets/audio/lingualibre
+          python3 - <<'PY'
+          import json
+          import requests
+          import urllib.parse
+          from pathlib import Path
+          letters=list('אבגדהוזחטיכלמנסעפצקרשת')
+          sess=requests.Session()
+          sess.headers['User-Agent']='BET-Hebraico-Biblico/1.0 (educational pronunciation audit; github.com/giselecanario-beep/bet-hebraico-biblico)'
+          manifest=[]
+          for i,letter in enumerate(letters):
+              title=f'File:LL-Q9288 (heb)-Uziel302-{letter}.wav'
+              try:
+                  r=sess.get('https://commons.wikimedia.org/w/api.php',params={'action':'query','format':'json','prop':'imageinfo','iiprop':'url|extmetadata','titles':title},timeout=25)
+                  r.raise_for_status()
+                  pages=r.json()['query']['pages']
+                  page=next(iter(pages.values()))
+                  info=page.get('imageinfo')
+                  if not info:
+                      print('MISSING',i+1,letter,'no imageinfo')
+                      continue
+                  item=info[0]
+                  meta=item.get('extmetadata',{})
+                  license_name=meta.get('LicenseShortName',{}).get('value','')
+                  if 'CC0' not in license_name.upper().replace('-',''):
+                      print('SKIP license',i+1,letter,repr(license_name))
+                      continue
+                  link=item.get('url','')
+                  if not link.startswith('https://upload.wikimedia.org/'):
+                      print('SKIP unsafe origin',i+1,letter)
+                      continue
+                  audio=sess.get(link,timeout=45)
+                  audio.raise_for_status()
+                  body=audio.content
+                  if len(body)<3000 or body[:4]!=b'RIFF' or body[8:12]!=b'WAVE':
+                      print('SKIP invalid WAV',i+1,letter,len(body))
+                      continue
+                  path=Path(f'assets/audio/lingualibre/letra-{i+1:02d}.wav')
+                  path.write_bytes(body)
+                  manifest.append({'index':i,'letter':letter,'file':path.as_posix(),'title':title,'license':license_name,'author':'Uziel302','commons_page':'https://commons.wikimedia.org/wiki/'+urllib.parse.quote(title.replace(' ','_'),safe=':/()'),'bytes':len(body)})
+                  print('FOUND',i+1,letter,len(body),license_name)
+              except Exception as ex:
+                  print('ERROR',i+1,letter,str(ex)[:140])
+          Path('assets/audio/lingualibre/MANIFEST.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n',encoding='utf8')
+          print('TOTAL VERIFIED',len(manifest),'of 22')
+          if len(manifest)<1: raise RuntimeError('No verified recording available')
+          PY
+      - name: Guardar audios com manifest de fontes
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/audio/lingualibre/
+          git commit -m "Importar gravacoes independentes de letras hebraicas CC0 verificadas"
+          git push origin HEAD:feature/lingualibre-audios-20261124
