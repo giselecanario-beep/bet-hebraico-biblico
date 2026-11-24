@@ -668,7 +668,7 @@ document.getElementById("btn-recuperar")?.addEventListener("click", async () => 
  <span class="section-overline">HEBRAICO BÍBLICO · PRIMEIROS PASSOS</span>
  <h1 id="alphabet-title">O alfabeto hebraico</h1>
  <p class="section-intro">O hebraico tem 22 letras. <strong>Toque nas letras com o pequeno ícone de áudio</strong> para ouvir imediatamente. Os nomes das letras e os sons consonantais não são a mesma coisa.</p>
- <div class="panel alphabet-review" role="note"><strong>Revisão de pronúncia, letra por letra</strong><p>Começamos por <strong>Álef (א)</strong> e <strong>Bet (ב)</strong>. O Álef traz uma demonstração de seu som consonantal, a parada glotal; o Bet tem uma gravação humana do nome da letra, aprovada na avaliação. As outras 20 letras ainda aguardam revisão dos áudios.</p></div>
+ <div class="panel alphabet-review" role="note"><strong>Revisão de pronúncia, letra por letra</strong><p>Começamos por <strong>Álef (א)</strong> e <strong>Bet (ב)</strong>. O Álef traz uma demonstração de seu som consonantal, a parada glotal; o Bet tem uma gravação humana do nome da letra, aprovada na avaliação. <span id="alphabet-review-summary">As outras 20 letras ainda aguardam revisão dos áudios.</span></p></div>
  <p class="small">Antes de começar: <button type="button" class="secondary" onclick="go('vogais')">Ver as vogais A, E, I, O, U</button></p>
  <div class="grid" id="letterGrid"></div>
  <div class="panel hidden" id="letterDetail" aria-live="polite"></div>
@@ -1104,6 +1104,7 @@ const reviewedAlphabetAudio=[
  {src:'./assets/audio/alef-parada-glotal-peter-isotalo.ogg',label:'Demonstração da parada glotal do Álef [ʔ]',credit:'Peter Isotalo',creditUrl:'https://commons.wikimedia.org/wiki/File:Glottal_stop.ogg',license:'CC BY-SA 3.0',explanation:'Nesta demonstração fonética, a parada glotal aparece antes e entre vogais a. Essas vogais servem apenas para tornar perceptível a interrupção do ar. <strong>O Álef não tem o som da vogal a.</strong> No hebraico israelense atual ele frequentemente não é ouvido como consoante.'},
  {src:'./assets/audio/bet-voz-humana-ijon.ogg',label:'Nome da letra Bet, em hebraico',credit:'Ijon',creditUrl:'https://commons.wikimedia.org/wiki/File:He-%D7%91%D6%B5%D6%BC%D7%99%D7%AA.ogg',license:'CC0 1.0',explanation:'Esta gravação reproduz o <strong>nome da letra Bet</strong>, na pronúncia israelense. O seu som consonantal, quando recebe dagesh (בּ), é b, como em bola; sem o ponto (ב), normalmente v na leitura moderna.'}
 ];
+const alphabetButtons=[];
 const alphabetAudioIcon='<span class="letter-sound-corner" aria-hidden="true">'+
  '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+
  '<path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="M15 9a5 5 0 0 1 0 6"/><path d="M18 6a9 9 0 0 1 0 12"/>'+
@@ -1135,7 +1136,7 @@ function showAlphabetLetter(index){
 }
 letters.forEach((letter,index)=>{
  const button=document.createElement('button');
- const hasAudio=index<reviewedAlphabetAudio.length;
+ const hasAudio=!!reviewedAlphabetAudio[index];
  button.type='button';
  button.className='letter'+(hasAudio?' letter-has-audio':'');
  button.setAttribute('aria-label',hasAudio
@@ -1144,8 +1145,56 @@ letters.forEach((letter,index)=>{
  button.innerHTML=(hasAudio?alphabetAudioIcon:'')+
   '<span class="glyph" lang="he" dir="rtl">'+letter[0]+'</span><span class="letter-name">'+letter[1]+'</span>';
  button.onclick=()=>showAlphabetLetter(index);
+ alphabetButtons.push(button);
  grid.appendChild(button);
 });
+
+/* Descobre apenas os audios humanos ja guardados no repositorio do BET.
+   Os arquivos antigos gerados artificialmente nao sao usados. */
+async function loadReviewedAlphabetAudio(){
+ if(typeof fetch!=='function')return;
+ try{
+  const response=await fetch('./assets/audio/lingualibre/MANIFEST.json',{cache:'no-store'});
+  if(!response.ok)return;
+  const items=await response.json();
+  if(!Array.isArray(items))return;
+  for(const item of items){
+   if(!item || !Number.isInteger(item.index) || item.index<2 || item.index>=letters.length)continue;
+   if(item.letter!==letters[item.index][0])continue;
+   const filename='letra-'+String(item.index+1).padStart(2,'0')+'.wav';
+   if(item.file!=='assets/audio/lingualibre/'+filename)continue;
+   if((item.license||'').toUpperCase().replace(/[^A-Z0-9]/g,'')!=='CC0')continue;
+   if(!/^https:\/\/commons\.wikimedia\.org\/wiki\//.test(item.commons_page||''))continue;
+   const index=item.index;
+   if(reviewedAlphabetAudio[index])continue;
+   const name=letters[index][1];
+   reviewedAlphabetAudio[index]={
+    src:'./'+item.file,
+    label:'Pronúncia hebraica da letra '+name,
+    credit:'Uziel302, projeto Lingua Libre',
+    creditUrl:item.commons_page,
+    license:'CC0 1.0',
+    explanation:'<strong>Gravação humana em hebraico</strong> da letra '+letters[index][0]+', disponibilizada pelo projeto Lingua Libre. O nome da letra e seu valor consonantal podem ser diferentes. A gravação é uma referência de pronúncia israelense moderna, e as observações históricas aparecem acima.'
+   };
+   const button=alphabetButtons[index];
+   if(button){
+    button.classList.add('letter-has-audio');
+    button.insertAdjacentHTML('afterbegin',alphabetAudioIcon);
+    button.setAttribute('aria-label','Ouvir a pronúncia hebraica da letra '+name+' e ver a explicação');
+   }
+  }
+  const count=reviewedAlphabetAudio.filter(Boolean).length;
+  const summary=document.getElementById('alphabet-review-summary');
+  if(summary){
+   summary.textContent=count===22
+    ?'As 22 letras têm gravações individuais disponíveis para escuta e avaliação.'
+    :count+' das 22 letras têm gravações disponíveis; as demais ainda estão em revisão.';
+  }
+ }catch(e){
+  // Manter os dois audios ja validados quando nao houver conexao.
+ }
+}
+loadReviewedAlphabetAudio();
 function renderLessons(){document.getElementById('lessonList').innerHTML=lessons.map((l,i)=>`<button class="lesson" onclick="openLesson(${i})"><strong>${completed.includes(i)?'✓ ':''}Aula ${i+1}: ${l.title}</strong><span>${l.subtitle}${completed.includes(i)?' · Concluída':''}</span></button>`).join('');document.getElementById('progressText').textContent=`${completed.length} de ${lessons.length} aulas introdutórias concluídas.`;document.getElementById('progressBar').style.width=(completed.length/lessons.length*100)+'%';document.querySelector('.journey-card .progress')?.setAttribute('aria-valuenow',String(completed.length))}
 function answerAlefBet(button){
   const card=button.closest('[data-ab-activity]');
