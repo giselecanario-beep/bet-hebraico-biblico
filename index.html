@@ -408,6 +408,19 @@ main{max-width:1020px;padding:28px 20px 72px}
 .alphabet-audio-paused{font:14px/1.6 Arial,sans-serif;color:var(--wine);border:1px solid #cbb6ae;border-radius:8px;background:#fbf3ed;padding:12px}
 .audio-in-review{font:600 12px/1.4 Arial,sans-serif;color:var(--wine);background:#f6ede5;border:1px solid var(--line);border-radius:6px;padding:10px 6px;text-align:center}
 
+
+/* Cartões do alfabeto: somente letras com gravação aprovada exibem ícone discreto. */
+#letterGrid .letter{position:relative}
+#letterGrid .letter-has-audio{cursor:pointer}
+#letterGrid .letter-has-audio:active{background:#f8f1ec}
+#letterGrid .letter-sound-corner{position:absolute;right:8px;top:7px;display:flex;align-items:center;justify-content:center;width:22px;height:22px;color:var(--wine);opacity:.78;pointer-events:none}
+#letterGrid .letter-sound-corner svg{width:16px;height:16px}
+#letterGrid .letter-has-audio:focus-visible .letter-sound-corner,
+#letterGrid .letter-has-audio:hover .letter-sound-corner{opacity:1}
+.audio-source-note{font:15px/1.65 Arial,sans-serif;border-left:3px solid var(--wine);padding:10px 13px;background:#f8f0e9;border-radius:5px}
+.alphabet-credit{font:13px/1.55 Arial,sans-serif;color:var(--muted);margin:14px 0}
+.alphabet-credit a{color:var(--wine);text-decoration:underline}
+
 </style>
   
 </head>
@@ -647,8 +660,8 @@ document.getElementById("btn-recuperar")?.addEventListener("click", async () => 
 <section id="alfabeto" class="page hidden" aria-labelledby="alphabet-title">
  <span class="section-overline">HEBRAICO BÍBLICO · PRIMEIROS PASSOS</span>
  <h1 id="alphabet-title">O alfabeto hebraico</h1>
- <p class="section-intro">O hebraico tem 22 letras. Toque em cada uma para conhecer <strong>o nome</strong> e <strong>o som que ela representa</strong>. São duas coisas diferentes.</p>
- <div class="panel alphabet-review" role="note"><strong>Pronúncia em revisão</strong><p>Estamos substituindo os áudios de nomes de letras que apresentaram problemas. Para ensinar com segurança, estes áudios estão temporariamente desativados. Os nomes e as orientações de leitura continuam disponíveis.</p></div>
+ <p class="section-intro">O hebraico tem 22 letras. <strong>Toque nas letras com o pequeno ícone de áudio</strong> para ouvir imediatamente. Os nomes das letras e os sons consonantais não são a mesma coisa.</p>
+ <div class="panel alphabet-review" role="note"><strong>Revisão de pronúncia, letra por letra</strong><p>Começamos por <strong>Álef (א)</strong> e <strong>Bet (ב)</strong>. O Álef traz uma demonstração de seu som consonantal, a parada glotal; o Bet tem uma gravação humana do nome da letra, aprovada na avaliação. As outras 20 letras ainda aguardam revisão dos áudios.</p></div>
  <p class="small">Antes de começar: <button type="button" class="secondary" onclick="go('vogais')">Ver as vogais A, E, I, O, U</button></p>
  <div class="grid" id="letterGrid"></div>
  <div class="panel hidden" id="letterDetail" aria-live="polite"></div>
@@ -1080,22 +1093,43 @@ window.aplicarProgressoNuvem = (uid, aulas) => {
 
 document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()=>go(b.dataset.page)));
 const grid=document.getElementById('letterGrid');
+const reviewedAlphabetAudio=[
+ {src:'./assets/audio/alef-parada-glotal-peter-isotalo.ogg',label:'Demonstração da parada glotal do Álef [ʔ]',credit:'Peter Isotalo',creditUrl:'https://commons.wikimedia.org/wiki/File:Glottal_stop.ogg',license:'CC BY-SA 3.0',explanation:'Nesta demonstração fonética, a parada glotal aparece antes e entre vogais a. Essas vogais servem apenas para tornar perceptível a interrupção do ar. <strong>O Álef não tem o som da vogal a.</strong> No hebraico israelense atual ele frequentemente não é ouvido como consoante.'},
+ {src:'./assets/audio/bet-voz-humana-ijon.ogg',label:'Nome da letra Bet, em hebraico',credit:'Ijon',creditUrl:'https://commons.wikimedia.org/wiki/File:He-%D7%91%D6%B5%D6%BC%D7%99%D7%AA.ogg',license:'CC0 1.0',explanation:'Esta gravação reproduz o <strong>nome da letra Bet</strong>, na pronúncia israelense. O seu som consonantal, quando recebe dagesh (בּ), é b, como em bola; sem o ponto (ב), normalmente v na leitura moderna.'}
+];
+const alphabetAudioIcon='<span class="letter-sound-corner" aria-hidden="true">'+
+ '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+
+ '<path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="M15 9a5 5 0 0 1 0 6"/><path d="M18 6a9 9 0 0 1 0 12"/>'+
+ '</svg></span>';
+function showAlphabetLetter(index){
+ const letter=letters[index];
+ if(!letter)return;
+ const audio=reviewedAlphabetAudio[index];
+ const detail=document.getElementById('letterDetail');
+ detail.classList.remove('hidden');
+ detail.innerHTML='<div class="big-hebrew" lang="he" dir="rtl">'+letter[0]+'</div>'+
+  '<h2>'+letter[1]+'</h2>'+
+  '<p><strong>Som da letra:</strong> '+letter[2]+'</p>'+
+  '<p><strong>Para entender melhor:</strong> '+letter[3]+'</p>'+
+  (audio
+   ? '<p class="audio-source-note">'+audio.explanation+'</p>'+
+     '<p class="audio-status" id="alphabetAudioStatus" role="status" aria-live="polite"></p>'+
+     '<p class="alphabet-credit">Fonte da demonstração: <a href="'+audio.creditUrl+'" target="_blank" rel="noopener noreferrer">'+audio.credit+'</a> · '+audio.license+'. O som do Álef é uma demonstração fonética, não uma gravação histórica de hebraico.</p>'
+   : '<p class="alphabet-audio-paused"><strong>Áudio em revisão.</strong> A gravação desta letra ainda não foi aprovada.</p>');
+ if(audio)playBetRecording(audio.src,audio.label,'alphabetAudioStatus');
+ else detail.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
 letters.forEach((letter,index)=>{
  const button=document.createElement('button');
+ const hasAudio=index<reviewedAlphabetAudio.length;
  button.type='button';
- button.className='letter';
- button.setAttribute('aria-label','Conhecer a letra '+letter[1]+'; áudio em revisão');
- button.innerHTML='<span class="glyph" lang="he" dir="rtl">'+letter[0]+'</span><span>'+letter[1]+'</span>';
- button.onclick=()=>{
-  const detail=document.getElementById('letterDetail');
-  detail.classList.remove('hidden');
-  detail.innerHTML='<div class="big-hebrew" lang="he" dir="rtl">'+letter[0]+'</div>'+
-   '<h2>'+letter[1]+'</h2>'+
-   '<p><strong>Som da letra:</strong> '+letter[2]+'</p>'+
-   '<p><strong>Para entender melhor:</strong> '+letter[3]+'</p>'+
-   '<p class="alphabet-audio-paused"><strong>Áudio em revisão.</strong> Estamos substituindo a gravação para que o nome da letra seja pronunciado corretamente. O som voltará depois da conferência.</p>';
-  detail.scrollIntoView({behavior:'smooth',block:'nearest'});
- };
+ button.className='letter'+(hasAudio?' letter-has-audio':'');
+ button.setAttribute('aria-label',hasAudio
+  ? 'Ouvir '+(index===0?'o som consonantal do Álef':'o nome da letra Bet')+' e ver a explicação'
+  : 'Conhecer a letra '+letter[1]+'; áudio em revisão');
+ button.innerHTML=(hasAudio?alphabetAudioIcon:'')+
+  '<span class="glyph" lang="he" dir="rtl">'+letter[0]+'</span><span class="letter-name">'+letter[1]+'</span>';
+ button.onclick=()=>showAlphabetLetter(index);
  grid.appendChild(button);
 });
 function renderLessons(){document.getElementById('lessonList').innerHTML=lessons.map((l,i)=>`<button class="lesson" onclick="openLesson(${i})"><strong>${completed.includes(i)?'✓ ':''}Aula ${i+1}: ${l.title}</strong><span>${l.subtitle}${completed.includes(i)?' · Concluída':''}</span></button>`).join('');document.getElementById('progressText').textContent=`${completed.length} de ${lessons.length} aulas introdutórias concluídas.`;document.getElementById('progressBar').style.width=(completed.length/lessons.length*100)+'%';document.querySelector('.journey-card .progress')?.setAttribute('aria-valuenow',String(completed.length))}
