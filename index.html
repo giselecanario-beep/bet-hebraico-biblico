@@ -459,6 +459,7 @@ main{max-width:1020px;padding:28px 20px 72px}
 .bet-paid-list{display:grid;gap:9px;margin:16px 0}.bet-paid-list .lesson{width:100%;text-align:left}.bet-paid-list .lesson::before{content:attr(data-number);counter-increment:none}.bet-paid-label{display:block;font:600 13px/1.5 Arial,sans-serif;color:var(--wine);margin-top:5px}#bet-paid-view{scroll-margin-top:100px}#bet-paid-view h2{color:var(--wine)}.bet-paid-note{font:14px/1.6 Arial,sans-serif;color:var(--muted)}
 .bet-module-button{width:100%;background:transparent;border:0;border-bottom:1px solid var(--line);border-radius:0;text-align:left;color:inherit;cursor:pointer;min-height:64px;font-family:inherit}.bet-module-button:hover,.bet-module-button:focus-visible{background:#f3e8de}.bet-module-button:focus-visible{outline:2px solid var(--wine);outline-offset:2px}.bet-module-button .bet-paid-label{font-size:12px;font-weight:400}.bet-module-button strong{display:block}.bet-module-button bdi{align-self:center}
 .bet-resume-card{margin:18px 0;padding:20px;border:1px solid var(--line);border-left:4px solid var(--wine);background:#fffaf3;border-radius:10px}.bet-resume-card h2{margin:7px 0;color:var(--wine);font-size:clamp(22px,5vw,28px)}.bet-resume-card p{margin:8px 0}.bet-resume-card button{min-height:44px}.bet-resume-status{font:13px/1.5 Arial,sans-serif;color:var(--muted)}.bet-restart{margin:8px 0 18px}
+.bet-lesson-next{margin:28px 0 4px;padding:20px;border:1px solid var(--line);border-top:4px solid var(--wine);border-radius:10px;background:#fffaf3;scroll-margin-top:110px}.bet-lesson-next h3{color:var(--wine);font-size:clamp(22px,5vw,28px);line-height:1.35;margin:9px 0}.bet-lesson-next .bet-next-action{display:block;width:100%;min-height:48px;margin:16px 0 8px;white-space:normal}.bet-lesson-next .secondary{min-height:44px}
 </style>
   
 </head>
@@ -1619,21 +1620,40 @@ function hearTutorAnswer(){
  window.speechSynthesis.speak(voice);
 }
 
-function openLesson(i,resume=null){window.betResumeCapture?.(true);window.betResumeDetach?.();window.betClearPaidView?.();if('speechSynthesis' in window)window.speechSynthesis.cancel();const l=lessons[i],view=document.getElementById('lessonView');view.classList.remove('hidden');view.innerHTML=`<span class="tag">Aula ${i+1} de ${lessons.length}</span><h2>${l.title}</h2>${l.body}${lessonAudioPanel(i)}${lessonVideoPanel(i)}${tutorPanel(i)}<button class="primary" onclick="completeLesson(${i})">${completed.includes(i)?'Revisar e continuar':'Concluir aula'}</button><button class="secondary" onclick="go('exercicios')">Praticar letras</button>`;initTutor(i);betResumeAttach(i,view,resume);}
-function completeLesson(i){if(!completed.includes(i)){completed.push(i);try{
-localStorage.setItem(chaveProgresso(),JSON.stringify(completed))
-  
-if (window.betUsuarioId) {
-  window.salvarProgresso(
-    window.betUsuarioId,
-    [...completed]
-  ).catch(erro => {
-    console.error("Erro ao salvar no Firebase:", erro);
-  });
+function betNextLesson(i){
+ const next=i+1;
+ if(next<lessons.length)return {i:next,id:String(next+1).padStart(2,'0'),title:lessons[next].title,paid:false};
+ const lesson=betPaidCatalog.find(l=>Number(l.id)===next+1);
+ return lesson?{i:next,id:lesson.id,title:lesson.title,paid:true}:null;
 }
-
-}catch(e){}}renderLessons();if(i+1<lessons.length)openLesson(i+1);else{betResumeFinish(i);document.getElementById('lessonView').innerHTML='<h2>Parabéns!</h2><p>Você concluiu as cinco aulas introdutórias gratuitas! Continue praticando e compartilhe sua experiência de teste.</p><button class="primary" onclick="go(\'exercicios\')">Fazer exercícios</button><button class="secondary" onclick="go(\'testes\')">Avaliar as cinco aulas</button>'}}
-
+function betAdvanceLesson(next){
+ if(!next)return;
+ if(next.paid)void betOpenPaid(next.id);else openLesson(next.i);
+}
+function betLessonFooter(i,view){
+ const next=betNextLesson(i);
+ const section=document.createElement('section');section.className='bet-lesson-next';section.setAttribute('aria-label','Conclusão e próxima aula');
+ const caption=document.createElement('span');caption.className='section-overline';caption.textContent=next?'PRÓXIMA ETAPA':'CONCLUSÃO';section.appendChild(caption);
+ const heading=document.createElement('h3');heading.textContent=next?'Aula '+next.id+' · '+next.title:'Você chegou à última aula disponível';section.appendChild(heading);
+ const note=document.createElement('p');note.className='small';note.textContent=next?(i>=5?'Conclua os desafios desta aula e continue seus estudos.':next.paid?'A próxima aula faz parte do BET Completo.':'Seu progresso será registrado ao avançar.'):'Registre sua conclusão para acompanhar seu progresso.';section.appendChild(note);
+ const button=document.createElement('button');button.type='button';button.className='primary bet-next-action';button.textContent=next?'Concluir e ir para a próxima aula →':'Concluir aula';button.onclick=()=>i<lessons.length?completeLesson(i):betCompletePaid(i);section.appendChild(button);
+ if(i<lessons.length){const practice=document.createElement('button');practice.type='button';practice.className='secondary';practice.textContent='Praticar letras';practice.onclick=()=>go('exercicios');section.appendChild(practice);}
+ view.appendChild(section);
+}
+function openLesson(i,resume=null){window.betResumeCapture?.(true);window.betResumeDetach?.();window.betClearPaidView?.();if('speechSynthesis' in window)window.speechSynthesis.cancel();const l=lessons[i],view=document.getElementById('lessonView');if(!l||!view)return;view.classList.remove('hidden');view.innerHTML=`<span class="tag">Aula ${i+1} de ${lessons.length}</span><h2>${l.title}</h2>${l.body}${lessonAudioPanel(i)}${lessonVideoPanel(i)}${tutorPanel(i)}`;betLessonFooter(i,view);initTutor(i);betResumeAttach(i,view,resume);}
+function completeLesson(i){
+ if(!lessons[i])return;
+ if(!completed.includes(i)){
+  completed.push(i);
+  try{localStorage.setItem(chaveProgresso(),JSON.stringify(completed));}catch(e){}
+  if(window.betUsuarioId)window.salvarProgresso(window.betUsuarioId,[...completed]).catch(erro=>console.error("Erro ao salvar no Firebase:",erro));
+ }
+ renderLessons();betResumeFinish(i);
+ const next=betNextLesson(i);
+ if(next){betAdvanceLesson(next);return;}
+ const view=document.getElementById('lessonView');view.innerHTML='<h2>Parabéns!</h2><p>Você concluiu todas as aulas disponíveis neste módulo.</p><button class="primary" onclick="go(\'exercicios\')">Fazer exercícios</button>';
+ view.scrollIntoView({behavior:'smooth',block:'start'});
+}
 
 // Catálogo público contém somente títulos. Corpos, áudios e respostas vêm do Firestore.
 const betPaidCatalog=[
@@ -1705,7 +1725,7 @@ async function betOpenPaid(id,resume=null){
   const heading=document.createElement('h2');heading.textContent=entry.title;
   view.append(tag,heading);
   const content=document.createElement('div');content.innerHTML=data.body+lessonAudioPanel(i)+tutorPanel(i);view.appendChild(content);
-  const finish=document.createElement('button');finish.type='button';finish.className='primary';finish.textContent='Concluir aula';finish.onclick=()=>betCompletePaid(i);view.appendChild(finish);
+  betLessonFooter(i,view);
   initTutor(i);
   betResumeAttach(i,view,resume);
  }catch(e){
@@ -1737,12 +1757,12 @@ function betCompletePaid(i){
  try{localStorage.setItem(betPaidProgressKey(),JSON.stringify([...new Set([...betPaidCompleted(),id])]));}catch(e){}
  betResumeFinish(i);
  window.betClearPaidView();window.betRenderPaidCatalog();
+ const next=betNextLesson(i);if(next){betAdvanceLesson(next);return;}
  const view=document.getElementById('bet-paid-view');view.classList.remove('hidden');
  const heading=document.createElement('h2');heading.textContent='Parabéns! Aula concluída.';
  const p=document.createElement('p');p.textContent='Seu progresso foi registrado. Entre na mesma conta em outro aparelho para retomar quando a sincronização estiver disponível.';
  view.append(heading,p);
- const next=betPaidCatalog[betPaidCatalog.findIndex(l=>l.id===id)+1];
- if(next){const btn=document.createElement('button');btn.type='button';btn.className='primary';btn.textContent='Próxima aula';btn.onclick=()=>betOpenPaid(next.id);view.appendChild(btn);}
+ const practice=document.createElement('button');practice.type='button';practice.className='primary';practice.textContent='Continuar praticando';practice.onclick=()=>go('exercicios');view.appendChild(practice);
  view.scrollIntoView({behavior:'smooth',block:'start'});
 }
 
