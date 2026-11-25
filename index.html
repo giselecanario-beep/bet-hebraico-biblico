@@ -428,6 +428,30 @@ main{max-width:1020px;padding:28px 20px 72px}
 .alef-teaching-note p{font:15px/1.68 Arial,sans-serif;margin:10px 0;color:var(--ink)}
 .alef-teaching-note bdi{font:23px 'Times New Roman',serif;color:var(--wine);margin-inline:3px}
 
+
+/* BET — acabamento editorial dos textos explicativos em português.
+   Títulos, cartões compactos, palavras hebraicas e controles mantêm o alinhamento original. */
+.page :is(p.section-intro,p.ab-lead,p.vowel-help,p.vowel-context-note,.hero-copy>p:not(.hero-assurance),.panel p:not(.small,.feedback,.audio-status,.audio-help,.ab-translation,.alphabet-credit,.alphabet-audio-paused,.vowel-audio-status),#letterDetail>p:not(.audio-status,.alphabet-credit,.alphabet-audio-paused),.alef-teaching-note p):not([lang="he"],[dir="rtl"],[role="status"]){
+  text-align:justify;
+  text-align-last:start;
+  hyphens:auto;
+  overflow-wrap:break-word;
+}
+.page :is(.ab-letter-card,.ab-word-card,.vowel-card,.audio-item,.ab-challenge,.vowel-mini-quiz) p{
+  text-align:start;
+  hyphens:none;
+}
+.page :is(.ab-translation,.feedback,.audio-status,.audio-help,.alphabet-credit,.hero-assurance){
+  text-align:start;
+  hyphens:none;
+}
+.page .ab-translation{text-align:center}
+@media(max-width:380px){
+  .page :is(p.section-intro,p.ab-lead,p.vowel-help,p.vowel-context-note,.hero-copy>p:not(.hero-assurance),.panel p,#letterDetail>p,.alef-teaching-note p):not([lang="he"],[dir="rtl"],.ab-translation){
+    text-align:start;
+    hyphens:none;
+  }
+}
 </style>
   
 </head>
