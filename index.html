@@ -457,6 +457,7 @@ main{max-width:1020px;padding:28px 20px 72px}
 .bet-subscription-preview{background:#fffaf4;border:1px solid var(--line);border-radius:10px;padding:18px;margin-top:15px}.bet-subscription-preview h3{color:var(--wine);font-size:27px;margin:8px 0}.bet-subscription-preview button:disabled{opacity:.65;cursor:not-allowed}.bet-subscription-preview button{max-width:100%}#bet-subscription-state{font:600 14px/1.6 Arial,sans-serif;color:var(--wine)}
 .m2-preview{border-left:4px solid var(--wine)}.m2-letters,.m2-words{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:12px;margin:15px 0}.m2-letter,.m2-word{min-width:0;background:#fffaf4;border:1px solid var(--line);border-radius:10px;padding:13px}.m2-glyph{font:clamp(36px,8vw,62px)/1.5 'Times New Roman',serif;color:var(--wine);text-align:center;overflow-wrap:normal}.m2-letter>strong{display:block;text-align:center;color:var(--wine);font-size:19px}.m2-letter p,.m2-word p{font:15px/1.6 Arial,sans-serif}.m2-letter button,.m2-word button{width:100%;font-size:14px;margin:7px 0;min-height:44px}.m2-word details{border-top:1px solid var(--line);padding-top:10px;margin-top:7px}.m2-word summary{font:600 14px/1.4 Arial,sans-serif;color:var(--wine);cursor:pointer}.m2-question{border-top:1px solid var(--line);padding:12px 0}.m2-question h4{margin:4px 0 10px;color:var(--ink);font:700 18px/1.5 Georgia,serif}.m2-options{display:flex;flex-wrap:wrap;gap:8px}.m2-options button{flex:1 1 115px;min-height:48px;margin:0;text-align:center}.m2-options bdi{font:25px/1.5 'Times New Roman',serif}.m2-bible .m2-glyph{font-size:clamp(32px,7vw,56px)}.page .m2-letter p,.page .m2-word p{text-align:start;hyphens:none}@media(max-width:420px){.m2-letters,.m2-words{grid-template-columns:1fr}}
 .bet-paid-list{display:grid;gap:9px;margin:16px 0}.bet-paid-list .lesson{width:100%;text-align:left}.bet-paid-list .lesson::before{content:attr(data-number);counter-increment:none}.bet-paid-label{display:block;font:600 13px/1.5 Arial,sans-serif;color:var(--wine);margin-top:5px}#bet-paid-view{scroll-margin-top:100px}#bet-paid-view h2{color:var(--wine)}.bet-paid-note{font:14px/1.6 Arial,sans-serif;color:var(--muted)}
+.bet-module-button{width:100%;background:transparent;border:0;border-bottom:1px solid var(--line);border-radius:0;text-align:left;color:inherit;cursor:pointer;min-height:64px;font-family:inherit}.bet-module-button:hover,.bet-module-button:focus-visible{background:#f3e8de}.bet-module-button:focus-visible{outline:2px solid var(--wine);outline-offset:2px}.bet-module-button .bet-paid-label{font-size:12px;font-weight:400}.bet-module-button strong{display:block}.bet-module-button bdi{align-self:center}
 </style>
   
 </head>
@@ -758,11 +759,9 @@ document.getElementById("btn-recuperar")?.addEventListener("click", async () => 
 <span class="section-overline">PRÓXIMA ETAPA · MÓDULO 2</span>
 <h2 id="next-module-heading">Da letra à leitura bíblica</h2>
 <p>Continue sua jornada com cinco novas aulas. Complete o alfabeto hebraico, conheça as cinco formas finais e aprenda a ler palavras e pequenas expressões bíblicas.</p>
-<div class="bet-module-outline">
-<div class="bet-module-row"><span class="bet-module-number">06</span><strong>Tet e Yod</strong><bdi lang="he" dir="rtl">ט י</bdi></div><div class="bet-module-row"><span class="bet-module-number">07</span><strong>Kaf, Lámed e Mem</strong><bdi lang="he" dir="rtl">כ ל מ</bdi></div><div class="bet-module-row"><span class="bet-module-number">08</span><strong>Nun, Sámech e Áyin</strong><bdi lang="he" dir="rtl">נ ס ע</bdi></div><div class="bet-module-row"><span class="bet-module-number">09</span><strong>Pe, Tsádi e Qof</strong><bdi lang="he" dir="rtl">פ צ ק</bdi></div><div class="bet-module-row"><span class="bet-module-number">10</span><strong>Resh, Shin/Sin e Tav</strong><bdi lang="he" dir="rtl">ר ש ת</bdi></div>
-</div>
+<div id="bet-paid-list" class="bet-module-outline" aria-label="Aulas do módulo 2"></div><article id="bet-paid-view" class="panel hidden" aria-live="polite"></article>
 <p class="bet-module-facts">5 aulas · 22 desafios interativos · vocabulário e leitura guiada</p>
-<div class="bet-subscription-preview"><span class="section-overline">BET COMPLETO MENSAL</span><h3>R$ 19,90 por mês</h3><p>Plano previsto: sete dias de teste grátis, acesso aos módulos exclusivos durante a assinatura e novos conteúdos progressivamente.</p><p id="bet-subscription-state" role="status" aria-live="polite">Entre na sua conta BET para consultar a assinatura.</p><button type="button" class="secondary" onclick="showAccountPanel()">Minha conta</button><button type="button" class="secondary" onclick="window.betAtualizarAssinatura?.()">Consultar assinatura</button><button type="button" class="primary" disabled>Assinar pelo Mercado Pago · em preparação</button><p class="small">O checkout existente será reativado somente depois dos testes de segurança e da disponibilização das aulas. Nenhum pagamento é solicitado nesta versão.</p><div id="bet-paid-list" class="bet-paid-list"></div><article id="bet-paid-view" class="panel hidden" aria-live="polite"></article></div>
+<div class="bet-subscription-preview"><span class="section-overline">BET COMPLETO MENSAL</span><h3>R$ 19,90 por mês</h3><p>Plano previsto: sete dias de teste grátis, acesso aos módulos exclusivos durante a assinatura e novos conteúdos progressivamente.</p><p id="bet-subscription-state" role="status" aria-live="polite">Entre na sua conta BET para consultar a assinatura.</p><button type="button" class="secondary" onclick="showAccountPanel()">Minha conta</button><button type="button" class="secondary" onclick="window.betAtualizarAssinatura?.()">Consultar assinatura</button><button type="button" class="primary" disabled>Assinar pelo Mercado Pago · em preparação</button><p class="small">O checkout existente será reativado somente depois dos testes de segurança e da disponibilização das aulas. Nenhum pagamento é solicitado nesta versão.</p></div>
 </section><div class="beta-panel"><h2>Terminou de testar?</h2><p class="small">Conte o que gostou e o que precisa melhorar.</p><button class="secondary" onclick="go('testes')">Avaliar minha experiência</button></div></section>
 <section id="testes" class="page hidden" aria-labelledby="beta-test-title">
  <span class="beta-label">Participação gratuita · versão experimental</span>
@@ -1621,11 +1620,11 @@ if (window.betUsuarioId) {
 
 // Catálogo público contém somente títulos. Corpos, áudios e respostas vêm do Firestore.
 const betPaidCatalog=[
- {id:'06',title:'Tet e Yod'},
- {id:'07',title:'Kaf, Lámed e Mem'},
- {id:'08',title:'Nun, Sámech e Áyin'},
- {id:'09',title:'Pe, Tsádi e Qof'},
- {id:'10',title:'Resh, Shin/Sin e Tav'}
+ {id:'06',letters:'ט י',title:'Tet e Yod'},
+ {id:'07',letters:'כ ל מ',title:'Kaf, Lámed e Mem'},
+ {id:'08',letters:'נ ס ע',title:'Nun, Sámech e Áyin'},
+ {id:'09',letters:'פ צ ק',title:'Pe, Tsádi e Qof'},
+ {id:'10',letters:'ר ש ת',title:'Resh, Shin/Sin e Tav'}
 ];
 let betPaidCurrent=null, betViewRequest=0;
 function betPaidCanUse(i){
@@ -1652,10 +1651,13 @@ window.betRenderPaidCatalog=()=>{
  el.innerHTML='';
  const completedPaid=betPaidCompleted();
  for(const lesson of betPaidCatalog){
-  const btn=document.createElement('button');btn.type='button';btn.className='lesson';btn.dataset.number=lesson.id;
+  const btn=document.createElement('button');btn.type='button';btn.className='bet-module-row bet-module-button';btn.dataset.number=lesson.id;
   const title=document.createElement('strong');title.textContent=lesson.title;
   const status=document.createElement('span');status.className='bet-paid-label';status.textContent=active?(completedPaid.includes(lesson.id)?'Concluída · revisar':'Aula exclusiva · abrir'):'Exclusiva para assinantes';
-  btn.append(title,status);btn.onclick=()=>betOpenPaid(lesson.id);el.appendChild(btn);
+  const number=document.createElement('span');number.className='bet-module-number';number.textContent=lesson.id;
+  const info=document.createElement('span');info.append(title,status);
+  const letters=document.createElement('bdi');letters.lang='he';letters.dir='rtl';letters.textContent=lesson.letters;
+  btn.append(number,info,letters);btn.onclick=()=>betOpenPaid(lesson.id);el.appendChild(btn);
  }
 };
 async function betOpenPaid(id){
@@ -1670,7 +1672,7 @@ async function betOpenPaid(id){
  view.scrollIntoView({behavior:'smooth',block:'start'});
  const a=window.betAccess;
  if(!a?.active||a.uid!==window.betUsuarioId||a.expires<=Date.now()||!window.betFetchPaidLesson){
-  msg.textContent='Aula exclusiva. Entre na sua conta e consulte sua assinatura.';return;
+  msg.textContent='Aula exclusiva. Entre na sua conta e consulte sua assinatura.';const login=document.createElement('button');login.type='button';login.className='secondary';login.textContent='Minha conta';login.onclick=()=>showAccountPanel();const check=document.createElement('button');check.type='button';check.className='secondary';check.textContent='Consultar acesso';check.onclick=async()=>{await window.betAtualizarAssinatura?.();await betOpenPaid(id);};view.append(login,check);return;
  }
  const request=++betViewRequest;
  try{
