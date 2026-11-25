@@ -17,7 +17,7 @@ try{
  const response=await fetch(root+'/betEntitlements/'+encodeURIComponent(uid),{headers});
  if(!response.ok&&response.status!==404)throw Error('Falha ao consultar autorização: HTTP '+response.status);
  const old=response.ok?await response.json():null;
- if(old?.fields?.role?.stringValue==='owner')throw Error('A conta de proprietária está protegida; nenhuma alteração foi feita.');
+ if(['owner','collaborator'].includes(old?.fields?.role?.stringValue))throw Error('O acesso permanente está protegido; nenhuma alteração foi feita.');
  if(mode==='liberar'&&old)throw Error('Já existe uma autorização. Use renovar após verificar os dados.');
  if(mode!=='liberar'&&!old)throw Error('Nenhuma autorização encontrada.');
  let fields;
