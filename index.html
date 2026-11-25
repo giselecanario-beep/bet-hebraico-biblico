@@ -460,6 +460,7 @@ main{max-width:1020px;padding:28px 20px 72px}
 .bet-module-button{width:100%;background:transparent;border:0;border-bottom:1px solid var(--line);border-radius:0;text-align:left;color:inherit;cursor:pointer;min-height:64px;font-family:inherit}.bet-module-button:hover,.bet-module-button:focus-visible{background:#f3e8de}.bet-module-button:focus-visible{outline:2px solid var(--wine);outline-offset:2px}.bet-module-button .bet-paid-label{font-size:12px;font-weight:400}.bet-module-button strong{display:block}.bet-module-button bdi{align-self:center}
 .bet-resume-card{margin:18px 0;padding:20px;border:1px solid var(--line);border-left:4px solid var(--wine);background:#fffaf3;border-radius:10px}.bet-resume-card h2{margin:7px 0;color:var(--wine);font-size:clamp(22px,5vw,28px)}.bet-resume-card p{margin:8px 0}.bet-resume-card button{min-height:44px}.bet-resume-status{font:13px/1.5 Arial,sans-serif;color:var(--muted)}.bet-restart{margin:8px 0 18px}
 .bet-lesson-next{margin:28px 0 4px;padding:20px;border:1px solid var(--line);border-top:4px solid var(--wine);border-radius:10px;background:#fffaf3;scroll-margin-top:110px}.bet-lesson-next h3{color:var(--wine);font-size:clamp(22px,5vw,28px);line-height:1.35;margin:9px 0}.bet-lesson-next .bet-next-action{display:block;width:100%;min-height:48px;margin:16px 0 8px;white-space:normal}.bet-lesson-next .secondary{min-height:44px}
+.bet-next-practice{margin-top:4px}.m2-question{scroll-margin-top:110px}
 </style>
   
 </head>
@@ -1630,15 +1631,35 @@ function betAdvanceLesson(next){
  if(!next)return;
  if(next.paid)void betOpenPaid(next.id);else openLesson(next.i);
 }
+function betPaidLessonFinished(i){
+ if(!betPaidCanUse(i))return false;
+ if(betPaidCompleted().includes(betPaidCurrent.id))return true;
+ const quiz=document.getElementById('m2Quiz'),total=betPaidCurrent.quiz.length;
+ return !!(quiz&&total>0&&quiz.querySelectorAll('.m2-question[data-solved="true"]').length>=total);
+}
+function betUpdatePaidFooter(i){
+ if(!betPaidCanUse(i))return;
+ const view=document.getElementById('bet-paid-view'),section=view?.querySelector('.bet-lesson-next');
+ if(!section)return;
+ const next=betNextLesson(i),finished=betPaidLessonFinished(i),already=betPaidCompleted().includes(betPaidCurrent.id);
+ const button=section.querySelector('.bet-next-action'),note=section.querySelector('.bet-next-note'),practice=section.querySelector('.bet-next-practice');
+ if(button)button.textContent=next?(already?'Ir para a próxima aula →':finished?'Concluir e ir para a próxima aula →':'Ir para a próxima aula →'):(already?'Finalizar revisão':'Concluir aula');
+ if(note)note.textContent=already?'Esta aula já está concluída.':finished?'Todos os desafios resolvidos. Seu progresso será registrado.':next?'Você pode avançar agora. Esta aula ficará pendente até concluir os desafios.':'Resolva os desafios restantes para concluir esta aula.';
+ if(practice)practice.classList.toggle('hidden',finished);
+}
 function betLessonFooter(i,view){
  const next=betNextLesson(i);
  const section=document.createElement('section');section.className='bet-lesson-next';section.setAttribute('aria-label','Conclusão e próxima aula');
  const caption=document.createElement('span');caption.className='section-overline';caption.textContent=next?'PRÓXIMA ETAPA':'CONCLUSÃO';section.appendChild(caption);
  const heading=document.createElement('h3');heading.textContent=next?'Aula '+next.id+' · '+next.title:'Você chegou à última aula disponível';section.appendChild(heading);
- const note=document.createElement('p');note.className='small';note.textContent=next?(i>=5?'Conclua os desafios desta aula e continue seus estudos.':next.paid?'A próxima aula faz parte do BET Completo.':'Seu progresso será registrado ao avançar.'):'Registre sua conclusão para acompanhar seu progresso.';section.appendChild(note);
+ const note=document.createElement('p');note.className='small bet-next-note';note.textContent=next?(i>=5?'Conclua os desafios desta aula e continue seus estudos.':next.paid?'A próxima aula faz parte do BET Completo.':'Seu progresso será registrado ao avançar.'):'Registre sua conclusão para acompanhar seu progresso.';section.appendChild(note);
  const button=document.createElement('button');button.type='button';button.className='primary bet-next-action';button.textContent=next?'Concluir e ir para a próxima aula →':'Concluir aula';button.onclick=()=>i<lessons.length?completeLesson(i):betCompletePaid(i);section.appendChild(button);
  if(i<lessons.length){const practice=document.createElement('button');practice.type='button';practice.className='secondary';practice.textContent='Praticar letras';practice.onclick=()=>go('exercicios');section.appendChild(practice);}
+ if(i>=lessons.length){
+  const practice=document.createElement('button');practice.type='button';practice.className='secondary bet-next-practice';practice.textContent='Voltar aos desafios';practice.onclick=()=>{const quiz=document.getElementById('m2Quiz');const first=quiz?.querySelector('.m2-question:not([data-solved="true"])');(first||quiz)?.scrollIntoView({behavior:'smooth',block:'start'});};section.appendChild(practice);
+ }
  view.appendChild(section);
+ if(i>=lessons.length)betUpdatePaidFooter(i);
 }
 function openLesson(i,resume=null){window.betResumeCapture?.(true);window.betResumeDetach?.();window.betClearPaidView?.();if('speechSynthesis' in window)window.speechSynthesis.cancel();const l=lessons[i],view=document.getElementById('lessonView');if(!l||!view)return;view.classList.remove('hidden');view.innerHTML=`<span class="tag">Aula ${i+1} de ${lessons.length}</span><h2>${l.title}</h2>${l.body}${lessonAudioPanel(i)}${lessonVideoPanel(i)}${tutorPanel(i)}`;betLessonFooter(i,view);initTutor(i);betResumeAttach(i,view,resume);}
 function completeLesson(i){
@@ -1707,7 +1728,7 @@ async function betOpenPaid(id,resume=null){
  stopHebrewAudio();currentTutorLesson=-1;lastTutorAnswer='';
  view.classList.remove('hidden');
  const msg=document.createElement('p');msg.textContent='Verificando acesso no servidor…';view.appendChild(msg);
- view.scrollIntoView({behavior:'smooth',block:'start'});
+ view.scrollIntoView({behavior:'instant',block:'start'});
  const a=window.betAccess;
  if(!a?.active||a.uid!==window.betUsuarioId||a.expires<=Date.now()||!window.betFetchPaidLesson){
   msg.textContent='Aula exclusiva. Entre na sua conta e consulte sua assinatura.';const login=document.createElement('button');login.type='button';login.className='secondary';login.textContent='Minha conta';login.onclick=()=>showAccountPanel();const check=document.createElement('button');check.type='button';check.className='secondary';check.textContent='Consultar acesso';check.onclick=async()=>{await window.betAtualizarAssinatura?.();await betOpenPaid(id,resume);};view.append(login,check);return;
@@ -1746,12 +1767,19 @@ function answerM2(button,lessonIndex,qIndex,option){
  const total=betPaidCurrent.quiz.length;
  const done=document.querySelectorAll('#m2Quiz .m2-question[data-solved="true"]').length;
  document.getElementById('m2Score').textContent=done+' de '+total+' desafios concluídos.'+(done===total?' Parabéns!':'');
+ betUpdatePaidFooter(lessonIndex);
 }
 function betCompletePaid(i){
  if(!betPaidCanUse(i))return;
- const quiz=document.getElementById('m2Quiz'),total=betPaidCurrent.quiz.length;
- if(!quiz||quiz.querySelectorAll('.m2-question[data-solved="true"]').length<total){
-  const score=document.getElementById('m2Score');if(score)score.textContent='Conclua os desafios antes de avançar.';quiz?.scrollIntoView({behavior:'smooth',block:'start'});return;
+ const nextLesson=betNextLesson(i);
+ if(!betPaidLessonFinished(i)){
+  if(nextLesson){
+   // Avança sem registrar conclusão quando os desafios ainda estão pendentes.
+   betResumeFinish(i);window.betClearPaidView();void betAdvanceLesson(nextLesson);return;
+  }
+  const quiz=document.getElementById('m2Quiz'),score=document.getElementById('m2Score');
+  if(score)score.textContent='Conclua os desafios restantes para finalizar a aula.';
+  (quiz?.querySelector('.m2-question:not([data-solved="true"])')||quiz)?.scrollIntoView({behavior:'smooth',block:'start'});return;
  }
  const id=betPaidCurrent.id;
  try{localStorage.setItem(betPaidProgressKey(),JSON.stringify([...new Set([...betPaidCompleted(),id])]));}catch(e){}
@@ -1881,6 +1909,7 @@ function betResumeAttach(i,view,saved=null){
  if(saved?.lessonId!==betResumeId(i))saved=null;
  betResumeActive={i,view,scope:betResumeScope};betResumeRestoring=true;
  if(saved)betResumeRestoreAnswers(i,view,saved);
+ if(i>=lessons.length)betUpdatePaidFooter(i);
  const restart=document.createElement('button');restart.type='button';restart.className='secondary bet-restart';restart.textContent='Recomeçar esta aula';restart.onclick=()=>{
   if(!confirm('Recomeçar esta aula? Os desafios em andamento serão reiniciados. A conclusão anterior será mantida.'))return;
   const fresh={lessonId:betResumeId(i),anchor:'start',offset:0,solved:[],paidCompleted:betPaidCompleted(),clientTime:Date.now()};
