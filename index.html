@@ -1219,7 +1219,7 @@ function betReviewBuild(all=false){
  betReviewNotebook();betReviewShow();
 }
 function betReviewStart(all=false){
- ++betReviewGeneration;betReviewPaid=[];betReviewBuild(all);
+ ++betReviewGeneration;if(!all||!betReviewHasAccess())betReviewPaid=[];betReviewBuild(all);
  const hint=document.getElementById('betReviewPaidHint'),button=document.getElementById('betReviewIncludePaid');
  const can=betReviewHasAccess()&&betPaidCompleted().length>0;
  hint.classList.toggle('hidden',!can);button.disabled=false;
@@ -1254,6 +1254,8 @@ window.betReviewClearPaid=()=>{
  const panel=document.getElementById('betReviewPractice');
  if(panel&&!panel.classList.contains('hidden')&&betReviewSession){stopHebrewAudio();betReviewBuild(false);}
  document.getElementById('betReviewPaidHint')?.classList.add('hidden');
+ const status=document.getElementById('betReviewPaidStatus');if(status)status.textContent='';
+ const glyph=document.getElementById('betReviewGlyph');if(glyph&&(!panel||panel.classList.contains('hidden'))){glyph.textContent='';document.getElementById('betReviewMeaning').textContent='';document.getElementById('betReviewTranslit').textContent='';document.getElementById('betReviewNotebook').replaceChildren();}
 };
 function betReviewMarkDifficulty(h){
  if(!betReviewWords.some(w=>w.h===h))return;
@@ -1289,7 +1291,7 @@ function switchPracticeMode(mode){
   stopHebrewAudio();
   document.getElementById('betReviewPractice').classList.toggle('hidden',mode!=='review');
   document.getElementById('chooseReview').setAttribute('aria-pressed',String(mode==='review'));
-  if(mode==='review')betReviewStart();
+  if(mode==='review')betReviewStart();else if(betReviewSession){window.betReviewClearPaid?.();betReviewSession=null;}
   document.getElementById('letterPractice').classList.toggle('hidden',mode!=='letters');
   document.getElementById('listeningPractice').classList.toggle('hidden',mode!=='listening');
   document.getElementById('chooseLetters').setAttribute('aria-pressed',String(mode==='letters'));
@@ -1342,7 +1344,7 @@ function answerVowelIntro(button){
  }
 }
 
-function go(page){stopHebrewAudio();if(page!=='exercicios'&&betReviewPaid.length)window.betReviewClearPaid?.();window.betResumeCapture?.(true);if(page!=='aulas')window.betResumeDetach?.();if(page!=='aulas')window.betClearPaidView?.();document.querySelectorAll('.page').forEach(x=>x.classList.toggle('hidden',x.id!==page));document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('active',x.dataset.page===page));window.scrollTo({top:0,behavior:'smooth'});if(page==='exercicios'){if(!quiz.length)startQuiz();if(!listeningOrder.length)startListeningQuiz();}}
+function go(page){stopHebrewAudio();if(page!=='exercicios'&&betReviewSession)window.betReviewClearPaid?.();window.betResumeCapture?.(true);if(page!=='aulas')window.betResumeDetach?.();if(page!=='aulas')window.betClearPaidView?.();document.querySelectorAll('.page').forEach(x=>x.classList.toggle('hidden',x.id!==page));document.querySelectorAll('nav button').forEach(x=>{const active=x.dataset.page===page;x.classList.toggle('active',active);if(active)x.setAttribute('aria-current','page');else x.removeAttribute('aria-current');});window.scrollTo({top:0,behavior:'smooth'});if(page==='exercicios'){if(!quiz.length)startQuiz();if(!listeningOrder.length)startListeningQuiz();}}
   
 function chaveProgresso() {
   return window.betUsuarioId
@@ -2152,7 +2154,7 @@ async function betResumeOpen(){
  }
 }
 window.betResumeBeforeAccountChange=()=>{
- ++betReviewGeneration;betReviewPaid=[];if(betReviewSession){betReviewSession=null;document.getElementById('betReviewPractice')?.classList.add('hidden');document.getElementById('chooseReview')?.setAttribute('aria-pressed','false');document.getElementById('letterPractice')?.classList.remove('hidden');document.getElementById('chooseLetters')?.setAttribute('aria-pressed','true');}
+ ++betReviewGeneration;betReviewPaid=[];if(betReviewSession){betReviewSession=null;document.getElementById('betReviewGlyph').textContent='';document.getElementById('betReviewMeaning').textContent='';document.getElementById('betReviewTranslit').textContent='';document.getElementById('betReviewNotebook').replaceChildren();document.getElementById('betReviewPaidHint').classList.add('hidden');document.getElementById('betReviewPractice')?.classList.add('hidden');document.getElementById('chooseReview')?.setAttribute('aria-pressed','false');document.getElementById('letterPractice')?.classList.remove('hidden');document.getElementById('chooseLetters')?.setAttribute('aria-pressed','true');}
  window.betResumeCapture?.(true);window.betResumeDetach?.();
  clearTimeout(betResumeWriteTimer);betResumeWriteTimer=null;
  const free=document.getElementById('lessonView');if(free){free.classList.add('hidden');free.innerHTML='';}
