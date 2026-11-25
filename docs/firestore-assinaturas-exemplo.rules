@@ -12,6 +12,6 @@ match /betEntitlements/{uid} {
   allow list, create, update, delete: if false;
 }
 match /betPaidLessons/{lessonId} {
-  allow get: if lessonId in ['06','07','08','09','10'] && betHasActiveAccess();
+  allow get: if betHasActiveAccess();
   allow list, create, update, delete: if false;
 }
