@@ -15,3 +15,7 @@ Solicitação da responsável pelo BET em 25/11/2026. Implementar depois da disp
 O código atual salva conclusão das aulas gratuitas no Firestore e conclusão das aulas exclusivas no navegador; não implementa retomada de posição. As regras existentes do documento users/{uid}/learning/intro restringem os campos a completed e updatedAt. Criar um documento dedicado de retomada com acesso apenas do próprio usuário ou revisar as regras de modo compatível, sem alterar permissões dos conteúdos pagos. Testar retorno após fechar, troca de aparelho, troca de conta, visitante, perda de conexão e assinatura expirada.
 
 Status: requisito registrado; implementação pendente. Não anunciar como funcionalidade disponível antes de testar.
+
+
+## Atualização de implementação
+25/11/2026: primeira versão implementada em main. Inclui retomada automática ao carregar a conta, botão de continuidade, posição por âncora, restauração de desafios corretos, reinício opcional e registro local por conta. A sincronização depende da publicação de `docs/firestore-regras-retomada.rules`. Sintaxe e validação de registros conferidas; testes de navegador, troca de aparelho, expiração e regras reais continuam pendentes. A retomada cobre as aulas do catálogo, não a seção de exercícios avulsos. Respostas incorretas e histórico da tutoria não são restaurados.
