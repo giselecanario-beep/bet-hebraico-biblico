@@ -1824,6 +1824,8 @@ function betResumeSnapshot(){
  const a=betResumeActive;if(!a||betResumeRestoring||a.scope!==betResumeScope||!a.view.isConnected||a.view.classList.contains('hidden')||document.getElementById('aulas').classList.contains('hidden'))return null;
  if(a.i>=5&&!betPaidCanUse(a.i))return null;
  const top=betResumeTop();
+ const bounds=a.view.getBoundingClientRect();
+ if(bounds.bottom<=top||bounds.top>=window.innerHeight)return null;
  const candidates=betResumeAnchors(a.view);
  let chosen=null;
  for(const entry of candidates){const r=entry.el.getBoundingClientRect();if(r.height>0&&r.top<=top+8&&r.bottom>top){chosen={entry,r};}}
