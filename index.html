@@ -466,6 +466,7 @@ main{max-width:1020px;padding:28px 20px 72px}
 .bet-tutor-disclosure,.bet-extra{margin:20px 0;border:1px solid var(--line);border-radius:10px;background:#fffaf4}.bet-tutor-disclosure>summary,.bet-extra>summary{cursor:pointer;padding:14px 16px;color:var(--wine);min-height:44px;font:600 15px/1.5 Arial,sans-serif}.bet-tutor-disclosure>summary span{display:block;font-size:13px;font-weight:400;color:var(--muted);padding:3px 0 0 17px}.bet-tutor-disclosure .tutor-panel{margin:0;border:0;border-top:1px solid var(--line);border-radius:0 0 10px 10px}.bet-extra>p,.bet-extra>ul{margin:0 16px 14px}.audio-status:empty{display:none}.audio-status:not(:empty){padding:9px 12px;background:#f7f1e7;border-radius:6px}.audio-play{min-height:44px}.audio-item{min-width:0}.audio-caption{overflow-wrap:anywhere}.bet-extra a{color:var(--wine)}.bet-tutor-disclosure summary:focus-visible,.bet-extra summary:focus-visible{outline:2px solid var(--wine);outline-offset:2px}@media(max-width:560px){.audio-item{padding:12px 7px;gap:6px}.audio-items{gap:8px}.audio-practice .audio-hebrew{font-size:clamp(27px,7.3vw,38px);overflow-wrap:anywhere}.audio-play{width:100%;white-space:normal}}
 .bet-review-actions{display:flex;flex-wrap:wrap;gap:8px}.bet-review-actions button{flex:1;min-height:44px}.bet-notebook-word{display:flex;align-items:center;gap:16px;padding:12px 16px;border-top:1px solid var(--line)}.bet-notebook-word>bdi{font:32px/1.6 'Times New Roman',serif;color:var(--wine);min-width:82px}.bet-notebook-word details{flex:1}.bet-notebook-word summary{cursor:pointer;color:var(--wine);font:14px/1.5 Arial,sans-serif}.bet-notebook-word p{font-size:16px}.account-details label{display:block;font:600 14px/1.5 Arial,sans-serif;margin:10px 0 4px}#betReviewReveal{display:block;margin-top:12px}#betReviewReveal.hidden{display:none}
 button:focus-visible,a:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--wine);outline-offset:3px}#betReviewGlyph{font-size:clamp(48px,13vw,90px);overflow-wrap:anywhere}#betReviewIncludePaid{max-width:100%;white-space:normal}.practice-modes{grid-template-columns:repeat(auto-fit,minmax(125px,1fr))}@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation-duration:0.01ms!important;transition-duration:0.01ms!important}}
+#usuario-conectado span{min-width:0;overflow-wrap:anywhere}#usuario-conectado button{min-width:64px;margin:0}
 </style>
   
 </head>
@@ -473,9 +474,9 @@ button:focus-visible,a:focus-visible,input:focus-visible,summary:focus-visible{o
 <script type="module">
   // Import the functions you need from the SDKs you need
   import { initializeApp } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js";
-  import { getAnalytics } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-analytics.js";
+  // Analytics opcional desativado nesta etapa.
     import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-auth.js";
-    import { getFirestore, doc, getDoc, getDocFromServer, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-firestore.js";
+    import { getFirestore, doc, getDoc, getDocFromServer, setDoc, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-firestore.js";
 
   // TODO: Add SDKs for Firebase products that you want to use
   // https://firebase.google.com/docs/web/setup#available-libraries
@@ -494,7 +495,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,summary:focus-visible{o
 
   // Initialize Firebase
   const app = initializeApp(firebaseConfig);
-  const analytics = getAnalytics(app);
+  // Sem métricas de marketing nesta versão.
     const auth = getAuth(app);
     
 const db = getFirestore(app);
@@ -541,7 +542,7 @@ window.betOpenCheckout=()=>{
  window.location.assign(BET_CHECKOUT_URL);
 };
 // O Firestore verifica a autorização no servidor; nenhuma permissão é criada pelo navegador.
-let subscriptionRequest=0, paidReadRequest=0, expiryTimer=null;
+let subscriptionRequest=0, paidReadRequest=0, expiryTimer=null, entitlementUnsubscribe=null;
 function betAccessReset(){
  ++paidReadRequest;
  if(expiryTimer!==null)clearTimeout(expiryTimer);
@@ -605,6 +606,7 @@ window.betFetchReviewVocabulary=async(ids)=>{
 };
 window.betCancelPaidRead=()=>{++paidReadRequest;};
 window.addEventListener('pagehide',()=>{window.betResumeCapture?.(true);betAccessReset();});
+window.addEventListener('pageshow',event=>{if(event.persisted&&auth.currentUser)void window.betConsultarAssinatura(auth.currentUser);});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&auth.currentUser)window.betConsultarAssinatura(auth.currentUser);});
 
 window.carregarProgresso = async (uid) => {
@@ -619,7 +621,21 @@ window.carregarProgresso = async (uid) => {
       
 window.betResumeBeforeAccountChange?.();
 window.betUsuarioId = user ? user.uid : null;
+if(entitlementUnsubscribe){entitlementUnsubscribe();entitlementUnsubscribe=null;}
 const betAccessCheck=window.betConsultarAssinatura?.(user);
+if(user){
+ const uid=user.uid;
+ entitlementUnsubscribe=onSnapshot(doc(db,'betEntitlements',uid),{includeMetadataChanges:true},snap=>{
+  if(auth.currentUser?.uid!==uid||snap.metadata.fromCache||snap.metadata.hasPendingWrites)return;
+  const data=snap.exists()?snap.data():null;
+  const permanent=['owner','collaborator'].includes(data?.role);
+  const until=data?.validUntil?.toMillis?.();
+  const allowed=data?.active===true&&(permanent||(Number.isFinite(until)&&until>Date.now()));
+  const current=window.betAccess;
+  const changed=allowed!==!!current?.active||(allowed&&(current?.uid!==uid||current?.owner!==(data.role==='owner')||current?.collaborator!==(data.role==='collaborator')||(!permanent&&current?.expires!==until)));
+  if(changed)void window.betConsultarAssinatura(user);
+ },()=>{if(auth.currentUser?.uid===uid){betAccessReset();const state=document.getElementById('bet-subscription-state');if(state)state.textContent='Não foi possível confirmar seu acesso. Consulte novamente.';}});
+}
 window.betResumeAccount?.(window.betUsuarioId,betAccessCheck);
 
 window.atualizarProgressoLocal?.();
@@ -644,15 +660,17 @@ if (user) {
   }
 
   if (user) {
-    statusBar.innerHTML = `<span>Conectado como: <strong>${user.email}</strong></span><button id="btn-sair" style="padding:8px 14px;background:#751f32;color:#fff;border:none;border-radius:5px;cursor:pointer;font-family:Georgia,serif;">Sair</button>`;
+    const identity=document.createElement('span');identity.textContent='Conectado como: ';
+    const emailText=document.createElement('strong');emailText.textContent=user.email||'Conta BET';identity.append(emailText);
+    const exit=document.createElement('button');exit.id='btn-sair';exit.type='button';exit.className='primary';exit.textContent='Sair';
+    statusBar.replaceChildren(identity,exit);
     statusBar.style.display = "flex";
     if (areaLogin) areaLogin.style.display = "none";
 
     document.getElementById("btn-sair").addEventListener("click", async () => {
-      await signOut(auth);
-      statusBar.style.display = "none";
-      statusBar.innerHTML = "";
-      if (areaLogin) areaLogin.style.display = "flex";
+      exit.disabled=true;
+      try{window.betResumeCapture?.(true);await signOut(auth);}
+      catch(error){exit.disabled=false;const msg=document.createElement('span');msg.setAttribute('role','alert');msg.textContent='Não foi possível sair. Tente novamente.';statusBar.append(msg);}
     });
   } else {
     statusBar.style.display = "none";
