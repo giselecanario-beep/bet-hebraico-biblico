@@ -12,7 +12,7 @@ service cloud.firestore {
         && request.resource.data.updatedAt is timestamp;
     }
 
-    // Retomada: metadados de estudo privados do próprio estudante.
+    // Retomada de estudos: leitura e escrita apenas pelo dono da conta.
     match /users/{userId}/learning/resume {
       allow get: if request.auth != null
         && request.auth.uid == userId;
@@ -21,27 +21,7 @@ service cloud.firestore {
         && request.resource.data.keys().hasAll(['lessonId', 'anchor', 'offset', 'solved', 'paidCompleted', 'clientTime', 'updatedAt'])
         && request.resource.data.keys().hasOnly(['lessonId', 'anchor', 'offset', 'solved', 'paidCompleted', 'clientTime', 'updatedAt'])
         && request.resource.data.lessonId is string
-        && request.resource.data.lessonId.matches('^[0-9]{2,6} {
-      return request.auth != null
-        && exists(/databases/$(database)/documents/betEntitlements/$(request.auth.uid))
-        && get(/databases/$(database)/documents/betEntitlements/$(request.auth.uid)).data.active == true
-        && (
-          get(/databases/$(database)/documents/betEntitlements/$(request.auth.uid)).data.get('role', '') == 'owner'
-          || get(/databases/$(database)/documents/betEntitlements/$(request.auth.uid)).data.validUntil > request.time
-        );
-    }
-    match /betEntitlements/{uid} {
-      allow get: if request.auth != null && request.auth.uid == uid;
-      allow list, create, update, delete: if false;
-    }
-    match /betPaidLessons/{lessonId} {
-      allow get: if betHasActiveAccess();
-      allow list, create, update, delete: if false;
-    }
-    
-  }
-}
-)
+        && request.resource.data.lessonId.matches('^[0-9]{2,6}$')
         && request.resource.data.anchor is string
         && request.resource.data.anchor.size() <= 120
         && request.resource.data.offset is int
