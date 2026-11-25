@@ -452,6 +452,8 @@ main{max-width:1020px;padding:28px 20px 72px}
     hyphens:none;
   }
 }
+/* Catálogo de lançamento BET — sem conteúdo pago incorporado. */
+.bet-next-module{margin-top:26px;border-top:4px solid var(--wine);scroll-margin-top:110px}.bet-next-module h2{color:var(--wine)}#next-module-heading{scroll-margin-top:110px}.bet-module-outline{margin:18px 0;display:grid;gap:0;border-top:1px solid var(--line)}.bet-module-row{display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}.bet-module-number{font:700 15px Arial,sans-serif;color:var(--wine);background:#f3e8de;border-radius:6px;padding:8px;text-align:center}.bet-module-row strong{font:700 17px/1.4 Georgia,serif}.bet-module-row bdi{font:26px/1.3 'Times New Roman',serif;color:var(--wine);white-space:nowrap}.bet-module-facts{font:600 14px/1.6 Arial,sans-serif;color:var(--wine)}.bet-module-status{background:#f7f1e7;border-radius:8px;padding:12px;font:14px/1.6 Arial,sans-serif}@media(max-width:380px){.bet-module-row{gap:8px;grid-template-columns:33px minmax(0,1fr) auto}.bet-module-row strong{font-size:15px}.bet-module-row bdi{font-size:21px}.bet-module-number{padding:6px}}
 </style>
   
 </head>
@@ -702,7 +704,16 @@ document.getElementById("btn-recuperar")?.addEventListener("click", async () => 
  <span class="section-overline">MÓDULO INTRODUTÓRIO · GRATUITO</span>
  <h1>Suas cinco primeiras aulas</h1>
  <p class="section-intro">Comece do Álef e avance até reconhecer suas primeiras palavras em hebraico. Aprenda no seu ritmo e retome uma aula quando quiser.</p>
- <div id="lessonList" class="lesson-list"></div><article class="panel hidden" id="lessonView"></article><div class="beta-panel"><h2>Terminou de testar?</h2><p class="small">Conte o que gostou e o que precisa melhorar.</p><button class="secondary" onclick="go('testes')">Avaliar minha experiência</button></div></section>
+ <div id="lessonList" class="lesson-list"></div><article class="panel hidden" id="lessonView"></article><section class="panel bet-next-module" aria-labelledby="next-module-heading">
+<span class="section-overline">PRÓXIMA ETAPA · MÓDULO 2</span>
+<h2 id="next-module-heading">Da letra à leitura bíblica</h2>
+<p>Continue sua jornada com cinco novas aulas. Complete o alfabeto hebraico, conheça as cinco formas finais e aprenda a ler palavras e pequenas expressões bíblicas.</p>
+<div class="bet-module-outline">
+<div class="bet-module-row"><span class="bet-module-number">06</span><strong>Tet e Yod</strong><bdi lang="he" dir="rtl">ט י</bdi></div><div class="bet-module-row"><span class="bet-module-number">07</span><strong>Kaf, Lámed e Mem</strong><bdi lang="he" dir="rtl">כ ל מ</bdi></div><div class="bet-module-row"><span class="bet-module-number">08</span><strong>Nun, Sámech e Áyin</strong><bdi lang="he" dir="rtl">נ ס ע</bdi></div><div class="bet-module-row"><span class="bet-module-number">09</span><strong>Pe, Tsádi e Qof</strong><bdi lang="he" dir="rtl">פ צ ק</bdi></div><div class="bet-module-row"><span class="bet-module-number">10</span><strong>Resh, Shin/Sin e Tav</strong><bdi lang="he" dir="rtl">ר ש ת</bdi></div>
+</div>
+<p class="bet-module-facts">5 aulas · 22 desafios interativos · vocabulário e leitura guiada</p>
+<p class="bet-module-status" role="note"><strong>Em preparação para lançamento.</strong> As aulas 01 a 05 continuam gratuitas. As inscrições para o segundo módulo ainda não estão abertas; nenhum pagamento é solicitado.</p>
+</section><div class="beta-panel"><h2>Terminou de testar?</h2><p class="small">Conte o que gostou e o que precisa melhorar.</p><button class="secondary" onclick="go('testes')">Avaliar minha experiência</button></div></section>
 <section id="testes" class="page hidden" aria-labelledby="beta-test-title">
  <span class="beta-label">Participação gratuita · versão experimental</span>
  <h1 id="beta-test-title">Ajude a melhorar o BET</h1>
@@ -755,7 +766,7 @@ document.getElementById("btn-recuperar")?.addEventListener("click", async () => 
 </section>
 <section id="trilhas" class="page hidden"><h1>Sua jornada no hebraico bíblico</h1><p class="section-intro">Do primeiro Alef à leitura e análise de textos bíblicos. Comece gratuitamente e avance no seu ritmo.</p><div class="tracks">
 <div class="track"><span class="tag">Trilha 1 · Gratuita</span><h3>Descobrir o hebraico</h3><p>Alfabeto, direção da escrita, primeiras palavras e exercícios.</p><button class="primary" onclick="go('aulas');openLesson(0)">Começar agora</button></div>
-<div class="track locked"><span class="tag">Trilha 2 · Em preparação</span><h3>Aprender a ler</h3><p>Vogais, sílabas, leitura e vocabulário.</p><button class="secondary" disabled>Em preparação</button></div>
+<div class="track"><span class="tag">Módulo 2 · Em preparação</span><h3>Da letra à leitura bíblica</h3><p>Complete o alfabeto em cinco novas aulas, conheça as formas finais e comece a ler expressões da Bíblia.</p><button class="secondary" type="button" onclick="go('aulas');document.getElementById('next-module-heading').scrollIntoView({behavior:'smooth',block:'start'})">Conhecer o módulo 2</button></div>
 <div class="track locked"><span class="tag">Trilha 3 · Em preparação</span><h3>Compreender a gramática</h3><p>Substantivos, pronomes, estado construto e frases.</p><button class="secondary" disabled>Em preparação</button></div>
 <div class="track locked"><span class="tag">Trilha 4 · Em preparação</span><h3>Descobrir os verbos</h3><p>Raízes, formas verbais e construções.</p><button class="secondary" disabled>Em preparação</button></div>
 <div class="track locked"><span class="tag">Trilha 5 · Em preparação</span><h3>Ler a Bíblia em hebraico</h3><p>Narrativas, poesia e textos proféticos.</p><button class="secondary" disabled>Em preparação</button></div>
