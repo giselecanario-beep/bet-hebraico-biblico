@@ -41,7 +41,7 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/betEntitlements/$(request.auth.uid))
         && get(/databases/$(database)/documents/betEntitlements/$(request.auth.uid)).data.active == true
         && (
-          get(/databases/$(database)/documents/betEntitlements/$(request.auth.uid)).data.get('role', '') == 'owner'
+          get(/databases/$(database)/documents/betEntitlements/$(request.auth.uid)).data.get('role', '') in ['owner', 'collaborator']
           || get(/databases/$(database)/documents/betEntitlements/$(request.auth.uid)).data.validUntil > request.time
         );
     }
