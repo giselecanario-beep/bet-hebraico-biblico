@@ -798,9 +798,9 @@ function lessonAudioPanel(index){
   const cards=list.map((item,n)=>
     '<div class="audio-item">'+
       '<span class="audio-hebrew" lang="he" dir="rtl">'+item.hebrew+'</span>'+
-      '<span class="audio-caption">'+item.label+'</span>'+
+      '<span class="audio-caption">'+(alphabetSpokenNames.includes(item.spoken)?item.label.replace('nome da letra','áudio da letra'):item.label)+'</span>'+
       (alphabetSpokenNames.includes(item.spoken) ?
-        '<span class="audio-in-review" aria-label="Áudio do nome da letra em revisão">Nome em revisão</span>' :
+        '<button type="button" class="secondary audio-play" onclick="playLessonSound('+index+','+n+')" aria-label="Ouvir gravação da letra">🔊 Ouvir letra</button>' :
         '<button type="button" class="secondary audio-play" onclick="playLessonSound('+index+','+n+')" aria-label="Ouvir '+item.label+' em hebraico">🔊 Ouvir</button>')+
     '</div>'
   ).join('');
@@ -810,7 +810,7 @@ function lessonAudioPanel(index){
     '<div class="audio-items">'+cards+'</div>'+
     '<label class="audio-help"><input type="checkbox" id="audioSlow" checked> Reproduzir mais devagar</label>'+
     '<p id="lessonAudioStatus" class="audio-status" role="status" aria-live="polite"></p>'+
-    '<p class="audio-help">As gravações dos nomes das letras estão em revisão. O som das palavras permanece em teste. A pronúncia israelense contemporânea e as tradições bíblicas antigas podem apresentar diferenças.</p>'+
+    '<p class="audio-help">Os áudios das letras podem demonstrar o nome ou o som consonantal; consulte a explicação no alfabeto. O som das palavras permanece em teste. A pronúncia israelense contemporânea e as tradições bíblicas antigas podem apresentar diferenças.</p>'+
     '<button type="button" class="secondary" onclick="stopHebrewAudio()">Parar áudio</button>'+
     '</section>';
 }
@@ -954,10 +954,9 @@ function playBetRecording(source,label,statusId){
  }
 }
 function playRecordedAlphabet(index,statusId){
- // Arquivos atuais foram gerados por voz não nativa e recortados de uma faixa contínua.
- // Nunca reproduzir antes da revisão linguística e auditiva.
- const status=document.getElementById(statusId);
- if(status)status.textContent='Pronúncia do nome da letra em revisão. Áudio temporariamente indisponível.';
+ const item=reviewedAlphabetAudio[index];
+ if(item)playBetRecording(item.src,item.label,statusId);
+ else {const status=document.getElementById(statusId);if(status)status.textContent='Não há gravação disponível para esta letra.';}
 }
 function playLessonSound(lessonIndex,itemIndex){
  const item=lessonSounds[lessonIndex]?.[itemIndex];
@@ -1116,6 +1115,16 @@ for(const [index,file,hash,ipa,credit,license,note] of alphabetPhoneticSamples){
   explanation:'<strong>Demonstração do som consonantal ['+ipa+'].</strong> '+note+' A gravação ilustra o fonema, não o nome da letra em hebraico. As vogais de apoio, quando presentes, não fazem parte da consoante.'
  };
 }
+/* Arquivos locais confirmados no repositório; carregamento imediato dos cartões. */
+const alphabetLocalRecordings=[{"index":2,"file":"assets/audio/lingualibre/letra-03.wav","author":"Uziel302","commons_page":"https://commons.wikimedia.org/wiki/File:LL-Q9288_(heb)-Uziel302-%D7%92.wav"},{"index":3,"file":"assets/audio/lingualibre/letra-04.wav","author":"Uziel302","commons_page":"https://commons.wikimedia.org/wiki/File:LL-Q9288_(heb)-Uziel302-%D7%93.wav"},{"index":4,"file":"assets/audio/lingualibre/letra-05.wav","author":"Uziel302","commons_page":"https://commons.wikimedia.org/wiki/File:LL-Q9288_(heb)-Uziel302-%D7%94.wav"},{"index":6,"file":"assets/audio/lingualibre/letra-07.wav","author":"Uziel302","commons_page":"https://commons.wikimedia.org/wiki/File:LL-Q9288_(heb)-Uziel302-%D7%96.wav"},{"index":7,"file":"assets/audio/lingualibre/letra-08.wav","author":"Uziel302","commons_page":"https://commons.wikimedia.org/wiki/File:LL-Q9288_(heb)-Uziel302-%D7%97.wav"},{"index":8,"file":"assets/audio/lingualibre/letra-09.wav","author":"Uziel302","commons_page":"https://commons.wikimedia.org/wiki/File:LL-Q9288_(heb)-Uziel302-%D7%98.wav"},{"index":9,"file":"assets/audio/lingualibre/letra-10.wav","author":"Uziel302","commons_page":"https://commons.wikimedia.org/wiki/File:LL-Q9288_(heb)-Uziel302-%D7%99.wav"},{"index":10,"file":"assets/audio/lingualibre/letra-11.wav","author":"Uziel302","commons_page":"https://commons.wikimedia.org/wiki/File:LL-Q9288_(heb)-Uziel302-%D7%9B.wav"}];
+for(const item of alphabetLocalRecordings){
+ const name=letters[item.index][1];
+ reviewedAlphabetAudio[item.index]={
+  src:'./'+item.file,label:'Pronúncia hebraica da letra '+name,
+  credit:item.author+', projeto Lingua Libre',creditUrl:item.commons_page,license:'CC0 1.0',
+  explanation:'<strong>Gravação humana em hebraico</strong> da letra '+letters[item.index][0]+'. O nome da letra e seu valor consonantal podem ser diferentes. Referência de pronúncia israelense moderna.'
+ };
+}
 const alphabetButtons=[];
 const alphabetAudioIcon='<span class="letter-sound-corner" aria-hidden="true">'+
  '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+
@@ -1142,7 +1151,7 @@ function showAlphabetLetter(index){
      (index===0?alefTeachingNote:'')+
      '<p class="audio-status" id="alphabetAudioStatus" role="status" aria-live="polite"></p>'+
      '<p class="alphabet-credit">Fonte da demonstração: <a href="'+audio.creditUrl+'" target="_blank" rel="noopener noreferrer">'+audio.credit+'</a> · '+'<a href="'+(audio.license==='CC0 1.0'?'https://creativecommons.org/publicdomain/zero/1.0/':'https://creativecommons.org/licenses/by-sa/3.0/')+'" target="_blank" rel="noopener noreferrer">'+audio.license+'</a>. '+(audio.externalPhonetics?'Amostra fonética externa, sem edição. Se não carregar, abra a fonte acima.':index===0?'O som do Álef é uma demonstração fonética, não uma gravação histórica de hebraico.':'Referência de pronúncia israelense moderna.')+'</p>'
-   : '<p class="alphabet-audio-paused"><strong>Áudio em revisão.</strong> A gravação desta letra ainda não foi aprovada.</p>');
+   : '<p class="alphabet-audio-paused"><strong>Áudio indisponível.</strong> Nenhuma gravação foi localizada para esta letra.</p>');
  if(audio)playBetRecording(audio.src,audio.label,'alphabetAudioStatus');
  else {++betRecordedRequest;if(betRecordedAudio){betRecordedAudio.pause();betRecordedAudio=null;}detail.scrollIntoView({behavior:'smooth',block:'nearest'});}
 }
@@ -1161,52 +1170,9 @@ letters.forEach((letter,index)=>{
  grid.appendChild(button);
 });
 
-/* Descobre apenas os audios humanos ja guardados no repositorio do BET.
-   Os arquivos antigos gerados artificialmente nao sao usados. */
-async function loadReviewedAlphabetAudio(){
- if(typeof fetch!=='function')return;
- try{
-  const response=await fetch('./assets/audio/lingualibre/MANIFEST.json',{cache:'no-store'});
-  if(!response.ok)return;
-  const items=await response.json();
-  if(!Array.isArray(items))return;
-  for(const item of items){
-   if(!item || !Number.isInteger(item.index) || item.index<2 || item.index>=letters.length)continue;
-   if(item.letter!==letters[item.index][0])continue;
-   const filename='letra-'+String(item.index+1).padStart(2,'0')+'.wav';
-   if(item.file!=='assets/audio/lingualibre/'+filename)continue;
-   if((item.license||'').toUpperCase().replace(/[^A-Z0-9]/g,'')!=='CC0')continue;
-   if(!/^https:\/\/commons\.wikimedia\.org\/wiki\//.test(item.commons_page||''))continue;
-   const index=item.index;
-   if(reviewedAlphabetAudio[index]&&!reviewedAlphabetAudio[index].externalPhonetics)continue;
-   const name=letters[index][1];
-   reviewedAlphabetAudio[index]={
-    src:'./'+item.file,
-    label:'Pronúncia hebraica da letra '+name,
-    credit:(item.author||'Uziel302')+', projeto Lingua Libre',
-    creditUrl:item.commons_page,
-    license:'CC0 1.0',
-    explanation:'<strong>Gravação humana em hebraico</strong> da letra '+letters[index][0]+', disponibilizada pelo projeto Lingua Libre. O nome da letra e seu valor consonantal podem ser diferentes. A gravação é uma referência de pronúncia israelense moderna, e as observações históricas aparecem acima.'
-   };
-   const button=alphabetButtons[index];
-   if(button){
-    button.classList.add('letter-has-audio');
-    if(!button.querySelector('.letter-sound-corner'))button.insertAdjacentHTML('afterbegin',alphabetAudioIcon);
-    button.setAttribute('aria-label','Ouvir a pronúncia hebraica da letra '+name+' e ver a explicação');
-   }
-  }
-  const count=reviewedAlphabetAudio.filter(Boolean).length;
-  const summary=document.getElementById('alphabet-review-summary');
-  if(summary){
-   summary.textContent=count===22
-    ?'As 22 letras têm recursos de escuta: gravações locais e demonstrações fonéticas externas, que ainda precisam de teste de reprodução. As amostras fonéticas não dizem o nome da letra.'
-    :count+' das 22 letras têm gravações disponíveis; as demais ainda estão em revisão.';
-  }
- }catch(e){
-  // Manter os dois audios ja validados quando nao houver conexao.
- }
-}
-loadReviewedAlphabetAudio();
+const alphabetSummary=document.getElementById('alphabet-review-summary');
+if(alphabetSummary)alphabetSummary.textContent='As 22 letras têm recursos de escuta configurados: 10 arquivos locais e 12 demonstrações fonéticas externas. As amostras fonéticas ilustram o som, não o nome da letra. Se uma fonte externa falhar, é possível abrir sua página de origem.';
+
 function renderLessons(){document.getElementById('lessonList').innerHTML=lessons.map((l,i)=>`<button class="lesson" onclick="openLesson(${i})"><strong>${completed.includes(i)?'✓ ':''}Aula ${i+1}: ${l.title}</strong><span>${l.subtitle}${completed.includes(i)?' · Concluída':''}</span></button>`).join('');document.getElementById('progressText').textContent=`${completed.length} de ${lessons.length} aulas introdutórias concluídas.`;document.getElementById('progressBar').style.width=(completed.length/lessons.length*100)+'%';document.querySelector('.journey-card .progress')?.setAttribute('aria-valuenow',String(completed.length))}
 function answerAlefBet(button){
   const card=button.closest('[data-ab-activity]');
