@@ -1111,9 +1111,9 @@ const alphabetAudioIcon='<span class="letter-sound-corner" aria-hidden="true">'+
  '</svg></span>';
 const alefTeachingNote='<div class="alef-teaching-note" role="note">'+
  '<strong>Uma observação sobre o Álef</strong>'+
- '<p>O som <b>“a, a, a”</b> da gravação serve para perceber pequenas interrupções do ar antes das vogais. O Álef, historicamente, representa essa <b>parada glotal</b>. A letra sozinha não significa “a”.</p>'+
- '<p><strong>Com sinais vocálicos:</strong> <bdi lang="he" dir="rtl">אַ</bdi> pode ser lido com <b>a</b>, <bdi lang="he" dir="rtl">אֶ</bdi> com <b>e</b> e <bdi lang="he" dir="rtl">אִ</bdi> com <b>i</b>. Também pode acompanhar <b>o</b> e <b>u</b>.</p>'+
- '<p><strong>E sem sinal escrito?</strong> A Bíblia hebraica também circula sem os pontinhos e tracinhos das vogais. Isso não significa que a palavra não tenha vogais nem que o Álef deva fazer uma parada audível. Observe a palavra e sua tradição de leitura. Em <bdi lang="he" dir="rtl">אָב</bdi> (<em>av</em>, pai), por exemplo, o qamats indica <b>a</b>.</p>'+
+ '<p>O som <b>“a, a, a”</b> da gravação ajuda a perceber pequenas interrupções do ar antes e entre as vogais. Essas interrupções demonstram a <b>parada glotal [ʔ]</b>, o valor consonantal histórico do Álef. O “a” ouvido é apenas uma vogal de apoio, não o som próprio da letra.</p>'+
+ '<p><strong>Com sinais vocálicos:</strong> <bdi lang="he" dir="rtl">אַ</bdi> pode ser lido com <b>a</b>, <bdi lang="he" dir="rtl">אֶ</bdi> com <b>e</b> e <bdi lang="he" dir="rtl">אִ</bdi> com <b>i</b>. <bdi lang="he" dir="rtl">אֹ</bdi> com <b>o</b> e <bdi lang="he" dir="rtl">אֻ</bdi> com <b>u</b>.</p>'+
+ '<p><strong>E sem sinal vocálico?</strong> O Álef não possui uma vogal própria. Em certas posições representa uma parada glotal; em outras, é silencioso ou auxilia a indicação de uma vogal. Na leitura israelense moderna, a parada muitas vezes não é perceptível. A escrita hebraica sem os pontinhos e tracinhos ainda representa palavras que têm vogais na leitura. Observe a palavra e sua tradição de leitura. Em <bdi lang="he" dir="rtl">אָב</bdi> (<em>av</em>, pai), por exemplo, o qamats indica <b>a</b>.</p>'+
  '</div>';
 function showAlphabetLetter(index){
  const letter=letters[index];
@@ -1129,10 +1129,10 @@ function showAlphabetLetter(index){
    ? '<p class="audio-source-note">'+audio.explanation+'</p>'+
      (index===0?alefTeachingNote:'')+
      '<p class="audio-status" id="alphabetAudioStatus" role="status" aria-live="polite"></p>'+
-     '<p class="alphabet-credit">Fonte da demonstração: <a href="'+audio.creditUrl+'" target="_blank" rel="noopener noreferrer">'+audio.credit+'</a> · '+audio.license+'. O som do Álef é uma demonstração fonética, não uma gravação histórica de hebraico.</p>'
+     '<p class="alphabet-credit">Fonte da demonstração: <a href="'+audio.creditUrl+'" target="_blank" rel="noopener noreferrer">'+audio.credit+'</a> · '+audio.license+'. '+(index===0?'O som do Álef é uma demonstração fonética, não uma gravação histórica de hebraico.':'Referência de pronúncia israelense moderna.')+'</p>'
    : '<p class="alphabet-audio-paused"><strong>Áudio em revisão.</strong> A gravação desta letra ainda não foi aprovada.</p>');
  if(audio)playBetRecording(audio.src,audio.label,'alphabetAudioStatus');
- else detail.scrollIntoView({behavior:'smooth',block:'nearest'});
+ else {++betRecordedRequest;if(betRecordedAudio){betRecordedAudio.pause();betRecordedAudio=null;}detail.scrollIntoView({behavior:'smooth',block:'nearest'});}
 }
 letters.forEach((letter,index)=>{
  const button=document.createElement('button');
@@ -1140,7 +1140,7 @@ letters.forEach((letter,index)=>{
  button.type='button';
  button.className='letter'+(hasAudio?' letter-has-audio':'');
  button.setAttribute('aria-label',hasAudio
-  ? 'Ouvir '+(index===0?'o som consonantal do Álef':'o nome da letra Bet')+' e ver a explicação'
+  ? 'Ouvir '+(index===0?'o som consonantal do Álef':'a pronúncia da letra '+letter[1])+' e ver a explicação'
   : 'Conhecer a letra '+letter[1]+'; áudio em revisão');
  button.innerHTML=(hasAudio?alphabetAudioIcon:'')+
   '<span class="glyph" lang="he" dir="rtl">'+letter[0]+'</span><span class="letter-name">'+letter[1]+'</span>';
@@ -1171,7 +1171,7 @@ async function loadReviewedAlphabetAudio(){
    reviewedAlphabetAudio[index]={
     src:'./'+item.file,
     label:'Pronúncia hebraica da letra '+name,
-    credit:'Uziel302, projeto Lingua Libre',
+    credit:(item.author||'Uziel302')+', projeto Lingua Libre',
     creditUrl:item.commons_page,
     license:'CC0 1.0',
     explanation:'<strong>Gravação humana em hebraico</strong> da letra '+letters[index][0]+', disponibilizada pelo projeto Lingua Libre. O nome da letra e seu valor consonantal podem ser diferentes. A gravação é uma referência de pronúncia israelense moderna, e as observações históricas aparecem acima.'
