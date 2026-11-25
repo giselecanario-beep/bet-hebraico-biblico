@@ -454,6 +454,9 @@ main{max-width:1020px;padding:28px 20px 72px}
 }
 /* Catálogo de lançamento BET — sem conteúdo pago incorporado. */
 .bet-next-module{margin-top:26px;border-top:4px solid var(--wine);scroll-margin-top:110px}.bet-next-module h2{color:var(--wine)}#next-module-heading{scroll-margin-top:110px}.bet-module-outline{margin:18px 0;display:grid;gap:0;border-top:1px solid var(--line)}.bet-module-row{display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}.bet-module-number{font:700 15px Arial,sans-serif;color:var(--wine);background:#f3e8de;border-radius:6px;padding:8px;text-align:center}.bet-module-row strong{font:700 17px/1.4 Georgia,serif}.bet-module-row bdi{font:26px/1.3 'Times New Roman',serif;color:var(--wine);white-space:nowrap}.bet-module-facts{font:600 14px/1.6 Arial,sans-serif;color:var(--wine)}.bet-module-status{background:#f7f1e7;border-radius:8px;padding:12px;font:14px/1.6 Arial,sans-serif}@media(max-width:380px){.bet-module-row{gap:8px;grid-template-columns:33px minmax(0,1fr) auto}.bet-module-row strong{font-size:15px}.bet-module-row bdi{font-size:21px}.bet-module-number{padding:6px}}
+.bet-subscription-preview{background:#fffaf4;border:1px solid var(--line);border-radius:10px;padding:18px;margin-top:15px}.bet-subscription-preview h3{color:var(--wine);font-size:27px;margin:8px 0}.bet-subscription-preview button:disabled{opacity:.65;cursor:not-allowed}.bet-subscription-preview button{max-width:100%}#bet-subscription-state{font:600 14px/1.6 Arial,sans-serif;color:var(--wine)}
+.m2-preview{border-left:4px solid var(--wine)}.m2-letters,.m2-words{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:12px;margin:15px 0}.m2-letter,.m2-word{min-width:0;background:#fffaf4;border:1px solid var(--line);border-radius:10px;padding:13px}.m2-glyph{font:clamp(36px,8vw,62px)/1.5 'Times New Roman',serif;color:var(--wine);text-align:center;overflow-wrap:normal}.m2-letter>strong{display:block;text-align:center;color:var(--wine);font-size:19px}.m2-letter p,.m2-word p{font:15px/1.6 Arial,sans-serif}.m2-letter button,.m2-word button{width:100%;font-size:14px;margin:7px 0;min-height:44px}.m2-word details{border-top:1px solid var(--line);padding-top:10px;margin-top:7px}.m2-word summary{font:600 14px/1.4 Arial,sans-serif;color:var(--wine);cursor:pointer}.m2-question{border-top:1px solid var(--line);padding:12px 0}.m2-question h4{margin:4px 0 10px;color:var(--ink);font:700 18px/1.5 Georgia,serif}.m2-options{display:flex;flex-wrap:wrap;gap:8px}.m2-options button{flex:1 1 115px;min-height:48px;margin:0;text-align:center}.m2-options bdi{font:25px/1.5 'Times New Roman',serif}.m2-bible .m2-glyph{font-size:clamp(32px,7vw,56px)}.page .m2-letter p,.page .m2-word p{text-align:start;hyphens:none}@media(max-width:420px){.m2-letters,.m2-words{grid-template-columns:1fr}}
+.bet-paid-list{display:grid;gap:9px;margin:16px 0}.bet-paid-list .lesson{width:100%;text-align:left}.bet-paid-list .lesson::before{content:attr(data-number);counter-increment:none}.bet-paid-label{display:block;font:600 13px/1.5 Arial,sans-serif;color:var(--wine);margin-top:5px}#bet-paid-view{scroll-margin-top:100px}#bet-paid-view h2{color:var(--wine)}.bet-paid-note{font:14px/1.6 Arial,sans-serif;color:var(--muted)}
 </style>
   
 </head>
@@ -463,7 +466,7 @@ main{max-width:1020px;padding:28px 20px 72px}
   import { initializeApp } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js";
   import { getAnalytics } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-analytics.js";
     import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-auth.js";
-    import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-firestore.js";
+    import { getFirestore, doc, getDoc, getDocFromServer, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-firestore.js";
 
   // TODO: Add SDKs for Firebase products that you want to use
   // https://firebase.google.com/docs/web/setup#available-libraries
@@ -497,6 +500,51 @@ async function salvarProgresso(uid, aulas) {
 
 window.salvarProgresso = salvarProgresso;
 
+// O Firestore verifica a autorização no servidor; nenhuma permissão é criada pelo navegador.
+let subscriptionRequest=0, paidReadRequest=0, expiryTimer=null;
+function betAccessReset(){
+ ++paidReadRequest;
+ if(expiryTimer!==null)clearTimeout(expiryTimer);
+ expiryTimer=null;
+ window.betAccess={uid:null,active:false,expires:0};
+ window.betClearPaidView?.();
+ window.betRenderPaidCatalog?.();
+}
+window.betConsultarAssinatura=async(user)=>{
+ const request=++subscriptionRequest;
+ betAccessReset();
+ const el=document.getElementById('bet-subscription-state');
+ if(!el)return;
+ if(!user){el.textContent='Entre na sua conta BET para consultar a assinatura.';return;}
+ el.textContent='Consultando assinatura…';
+ try{
+  const result=await getDocFromServer(doc(db,'betEntitlements',user.uid));
+  if(request!==subscriptionRequest||auth.currentUser?.uid!==user.uid)return;
+  const data=result.exists()?result.data():null;
+  const expires=data?.validUntil?.toMillis?.();
+  const active=data?.active===true&&Number.isFinite(expires)&&expires>Date.now();
+  window.betAccess={uid:user.uid,active,expires:active?expires:0};
+  el.textContent=active?'Assinatura ativa. Escolha uma aula exclusiva abaixo.':'Nenhuma autorização ativa encontrada. Se já assinou, aguarde a confirmação.';
+  window.betRenderPaidCatalog?.();
+  if(active)expiryTimer=setTimeout(()=>window.betConsultarAssinatura(auth.currentUser),Math.min(Math.max(0,expires-Date.now()),2147483647));
+ }catch(e){
+  if(request===subscriptionRequest)el.textContent='Não foi possível consultar a assinatura. Verifique a conexão e tente novamente.';
+ }
+};
+window.betAtualizarAssinatura=()=>window.betConsultarAssinatura(auth.currentUser);
+window.betFetchPaidLesson=async(id)=>{
+ const user=auth.currentUser, access=window.betAccess;
+ if(!user||access?.uid!==user.uid||!access.active||access.expires<=Date.now()||!/^\d{2,}$/.test(id)||Number(id)<6)throw new Error('access');
+ const request=++paidReadRequest;
+ const snap=await getDocFromServer(doc(db,'betPaidLessons',id));
+ if(request!==paidReadRequest||auth.currentUser?.uid!==user.uid||!window.betAccess?.active||window.betAccess.expires<=Date.now())throw new Error('changed');
+ if(!snap.exists())throw new Error('missing');
+ return snap.data();
+};
+window.betCancelPaidRead=()=>{++paidReadRequest;};
+window.addEventListener('pagehide',betAccessReset);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&auth.currentUser)window.betConsultarAssinatura(auth.currentUser);});
+
 window.carregarProgresso = async (uid) => {
   const registro = await getDoc(progressoRef(uid));
   return registro.exists()
@@ -508,6 +556,7 @@ window.carregarProgresso = async (uid) => {
   const areaLogin = document.getElementById("login-area");
       
 window.betUsuarioId = user ? user.uid : null;
+window.betConsultarAssinatura?.(user);
 
 window.atualizarProgressoLocal?.();
 
@@ -712,7 +761,7 @@ document.getElementById("btn-recuperar")?.addEventListener("click", async () => 
 <div class="bet-module-row"><span class="bet-module-number">06</span><strong>Tet e Yod</strong><bdi lang="he" dir="rtl">ט י</bdi></div><div class="bet-module-row"><span class="bet-module-number">07</span><strong>Kaf, Lámed e Mem</strong><bdi lang="he" dir="rtl">כ ל מ</bdi></div><div class="bet-module-row"><span class="bet-module-number">08</span><strong>Nun, Sámech e Áyin</strong><bdi lang="he" dir="rtl">נ ס ע</bdi></div><div class="bet-module-row"><span class="bet-module-number">09</span><strong>Pe, Tsádi e Qof</strong><bdi lang="he" dir="rtl">פ צ ק</bdi></div><div class="bet-module-row"><span class="bet-module-number">10</span><strong>Resh, Shin/Sin e Tav</strong><bdi lang="he" dir="rtl">ר ש ת</bdi></div>
 </div>
 <p class="bet-module-facts">5 aulas · 22 desafios interativos · vocabulário e leitura guiada</p>
-<p class="bet-module-status" role="note"><strong>Em preparação para lançamento.</strong> As aulas 01 a 05 continuam gratuitas. As inscrições para o segundo módulo ainda não estão abertas; nenhum pagamento é solicitado.</p>
+<div class="bet-subscription-preview"><span class="section-overline">BET COMPLETO MENSAL</span><h3>R$ 19,90 por mês</h3><p>Plano previsto: sete dias de teste grátis, acesso aos módulos exclusivos durante a assinatura e novos conteúdos progressivamente.</p><p id="bet-subscription-state" role="status" aria-live="polite">Entre na sua conta BET para consultar a assinatura.</p><button type="button" class="secondary" onclick="showAccountPanel()">Minha conta</button><button type="button" class="secondary" onclick="window.betAtualizarAssinatura?.()">Consultar assinatura</button><button type="button" class="primary" disabled>Assinar pelo Mercado Pago · em preparação</button><p class="small">O checkout existente será reativado somente depois dos testes de segurança e da disponibilização das aulas. Nenhum pagamento é solicitado nesta versão.</p><div id="bet-paid-list" class="bet-paid-list"></div><article id="bet-paid-view" class="panel hidden" aria-live="polite"></article></div>
 </section><div class="beta-panel"><h2>Terminou de testar?</h2><p class="small">Conte o que gostou e o que precisa melhorar.</p><button class="secondary" onclick="go('testes')">Avaliar minha experiência</button></div></section>
 <section id="testes" class="page hidden" aria-labelledby="beta-test-title">
  <span class="beta-label">Participação gratuita · versão experimental</span>
@@ -828,7 +877,7 @@ const lessonSounds=[
   ]
 ];
 function lessonAudioPanel(index){
-  const list=lessonSounds[index] || [];
+  const list=betLessonAudio(index) || [];
   if(!list.length)return '';
   const cards=list.map((item,n)=>
     '<div class="audio-item">'+
@@ -864,6 +913,7 @@ function clearHebrewVoiceWait(){
   }
 }
 function stopHebrewAudio(){
+ ++betRecordedRequest;if(betRecordedAudio){betRecordedAudio.pause();betRecordedAudio=null;}
   hebrewSpeechRequestId++;
   clearHebrewVoiceWait();
   if('speechSynthesis' in window)window.speechSynthesis.cancel();
@@ -989,12 +1039,13 @@ function playBetRecording(source,label,statusId){
  }
 }
 function playRecordedAlphabet(index,statusId){
+ ++hebrewSpeechRequestId;clearHebrewVoiceWait();
  const item=reviewedAlphabetAudio[index];
  if(item)playBetRecording(item.src,item.label,statusId);
  else {const status=document.getElementById(statusId);if(status)status.textContent='Não há gravação disponível para esta letra.';}
 }
 function playLessonSound(lessonIndex,itemIndex){
- const item=lessonSounds[lessonIndex]?.[itemIndex];
+ const item=betLessonAudio(lessonIndex)?.[itemIndex];
  if(!item)return;
  const letter=alphabetSpokenNames.indexOf(item.spoken);
  if(letter>=0){playRecordedAlphabet(letter,'lessonAudioStatus');return;}
@@ -1003,6 +1054,7 @@ function playLessonSound(lessonIndex,itemIndex){
   playBetRecording('./assets/audio/palavra-'+String(word+1).padStart(2,'0')+'.wav',item.label,'lessonAudioStatus');
   return;
  }
+ if(lessonIndex>=5&&betPaidCanUse(lessonIndex)){++betRecordedRequest;if(betRecordedAudio){betRecordedAudio.pause();betRecordedAudio=null;}speakHebrew(item.spoken,item.label,'lessonAudioStatus');return;}
  const status=document.getElementById('lessonAudioStatus');
  if(status)status.textContent='Esta gravação ainda não foi preparada.';
 }
@@ -1085,7 +1137,7 @@ function answerVowelIntro(button){
  }
 }
 
-function go(page){document.querySelectorAll('.page').forEach(x=>x.classList.toggle('hidden',x.id!==page));document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('active',x.dataset.page===page));window.scrollTo({top:0,behavior:'smooth'});if(page==='exercicios'){if(!quiz.length)startQuiz();if(!listeningOrder.length)startListeningQuiz();}}
+function go(page){if(page!=='aulas')window.betClearPaidView?.();document.querySelectorAll('.page').forEach(x=>x.classList.toggle('hidden',x.id!==page));document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('active',x.dataset.page===page));window.scrollTo({top:0,behavior:'smooth'});if(page==='exercicios'){if(!quiz.length)startQuiz();if(!listeningOrder.length)startListeningQuiz();}}
   
 function chaveProgresso() {
   return window.betUsuarioId
@@ -1458,7 +1510,7 @@ function lessonVideoPanel(index){
 }
 
 function tutorPanel(index){
- if(!tutorLessons[index])return '';
+ if(!betLessonTutor(index))return '';
  return '<section class="panel tutor-panel" id="lessonTutor" aria-labelledby="tutorHeading">'+
    '<div class="tutor-header"><div class="tutor-mark" aria-hidden="true">G</div><div>'+
    '<h3 id="tutorHeading" class="tutor-heading">IA Gisele</h3>'+
@@ -1485,7 +1537,7 @@ function tutorAddBubble(text,role){
 }
 function initTutor(index){
  currentTutorLesson=index;
- const guide=tutorLessons[index];
+ const guide=betLessonTutor(index);
  const quick=document.getElementById('tutorQuick');
  if(!guide||!quick)return;
  quick.innerHTML='';
@@ -1500,7 +1552,7 @@ function initTutor(index){
  lastTutorAnswer='';
 }
 function tutorAnswerQuestion(input,preferredIndex){
- const lesson=tutorLessons[currentTutorLesson];
+ const lesson=betLessonTutor(currentTutorLesson);
  if(!lesson)return 'Abra uma aula para conversar sobre seu conteúdo.';
  if(Number.isInteger(preferredIndex)&&lesson.questions[preferredIndex])return lesson.questions[preferredIndex].a;
  const question=tutorNormalize(input);
@@ -1523,7 +1575,7 @@ function tutorReply(question,answer){
  lastTutorAnswer=answer;
 }
 function askTutorGuided(index){
- const lesson=tutorLessons[currentTutorLesson];
+ const lesson=betLessonTutor(currentTutorLesson);
  const q=lesson?.questions[index];
  if(!q)return;
  tutorReply(q.q,tutorAnswerQuestion(q.q,index));
@@ -1550,7 +1602,7 @@ function hearTutorAnswer(){
  window.speechSynthesis.speak(voice);
 }
 
-function openLesson(i){if('speechSynthesis' in window)window.speechSynthesis.cancel();const l=lessons[i],view=document.getElementById('lessonView');view.classList.remove('hidden');view.innerHTML=`<span class="tag">Aula ${i+1} de ${lessons.length}</span><h2>${l.title}</h2>${l.body}${lessonAudioPanel(i)}${lessonVideoPanel(i)}${tutorPanel(i)}<button class="primary" onclick="completeLesson(${i})">${completed.includes(i)?'Revisar e continuar':'Concluir aula'}</button><button class="secondary" onclick="go('exercicios')">Praticar letras</button>`;initTutor(i);view.scrollIntoView({behavior:'smooth',block:'start'})}
+function openLesson(i){window.betClearPaidView?.();if('speechSynthesis' in window)window.speechSynthesis.cancel();const l=lessons[i],view=document.getElementById('lessonView');view.classList.remove('hidden');view.innerHTML=`<span class="tag">Aula ${i+1} de ${lessons.length}</span><h2>${l.title}</h2>${l.body}${lessonAudioPanel(i)}${lessonVideoPanel(i)}${tutorPanel(i)}<button class="primary" onclick="completeLesson(${i})">${completed.includes(i)?'Revisar e continuar':'Concluir aula'}</button><button class="secondary" onclick="go('exercicios')">Praticar letras</button>`;initTutor(i);view.scrollIntoView({behavior:'smooth',block:'start'})}
 function completeLesson(i){if(!completed.includes(i)){completed.push(i);try{
 localStorage.setItem(chaveProgresso(),JSON.stringify(completed))
   
@@ -1564,6 +1616,113 @@ if (window.betUsuarioId) {
 }
 
 }catch(e){}}renderLessons();if(i+1<lessons.length)openLesson(i+1);else{document.getElementById('lessonView').innerHTML='<h2>Parabéns!</h2><p>Você concluiu as cinco aulas introdutórias gratuitas! Continue praticando e compartilhe sua experiência de teste.</p><button class="primary" onclick="go(\'exercicios\')">Fazer exercícios</button><button class="secondary" onclick="go(\'testes\')">Avaliar as cinco aulas</button>'}}
+
+
+// Catálogo público contém somente títulos. Corpos, áudios e respostas vêm do Firestore.
+const betPaidCatalog=[
+ {id:'06',title:'Tet e Yod'},
+ {id:'07',title:'Kaf, Lámed e Mem'},
+ {id:'08',title:'Nun, Sámech e Áyin'},
+ {id:'09',title:'Pe, Tsádi e Qof'},
+ {id:'10',title:'Resh, Shin/Sin e Tav'}
+];
+let betPaidCurrent=null, betViewRequest=0;
+function betPaidCanUse(i){
+ const a=window.betAccess;
+ return !!(betPaidCurrent&&betPaidCurrent.index===i&&a?.active&&a.uid===window.betUsuarioId&&a.expires>Date.now());
+}
+function betLessonAudio(i){return i<5?lessonSounds[i]:betPaidCanUse(i)?betPaidCurrent.sounds:[];}
+function betLessonTutor(i){return i<5?tutorLessons[i]:betPaidCanUse(i)?betPaidCurrent.tutor:null;}
+function betPaidProgressKey(){return 'bet-paid-progress-'+window.betUsuarioId;}
+function betPaidCompleted(){
+ if(!window.betUsuarioId)return [];
+ try{const a=JSON.parse(localStorage.getItem(betPaidProgressKey())||'[]');return Array.isArray(a)?a.filter(x=>typeof x==='string'):[];}catch(e){return [];}
+}
+window.betClearPaidView=()=>{
+ ++betViewRequest;window.betCancelPaidRead?.();
+ const had=betPaidCurrent!==null;betPaidCurrent=null;
+ const v=document.getElementById('bet-paid-view');
+ if(v){v.innerHTML='';v.classList.add('hidden');}
+ if(had){stopHebrewAudio();currentTutorLesson=-1;lastTutorAnswer='';}
+};
+window.betRenderPaidCatalog=()=>{
+ const el=document.getElementById('bet-paid-list');if(!el)return;
+ const a=window.betAccess,active=!!(a?.active&&a.uid===window.betUsuarioId&&a.expires>Date.now());
+ el.innerHTML='';
+ const completedPaid=betPaidCompleted();
+ for(const lesson of betPaidCatalog){
+  const btn=document.createElement('button');btn.type='button';btn.className='lesson';btn.dataset.number=lesson.id;
+  const title=document.createElement('strong');title.textContent=lesson.title;
+  const status=document.createElement('span');status.className='bet-paid-label';status.textContent=active?(completedPaid.includes(lesson.id)?'Concluída · revisar':'Aula exclusiva · abrir'):'Exclusiva para assinantes';
+  btn.append(title,status);btn.onclick=()=>betOpenPaid(lesson.id);el.appendChild(btn);
+ }
+};
+async function betOpenPaid(id){
+ const entry=betPaidCatalog.find(l=>l.id===id);if(!entry)return;
+ window.betClearPaidView();
+ const view=document.getElementById('bet-paid-view'),free=document.getElementById('lessonView');
+ if(!view)return;
+ if(free){free.innerHTML='';free.classList.add('hidden');}
+ stopHebrewAudio();currentTutorLesson=-1;lastTutorAnswer='';
+ view.classList.remove('hidden');
+ const msg=document.createElement('p');msg.textContent='Verificando acesso no servidor…';view.appendChild(msg);
+ view.scrollIntoView({behavior:'smooth',block:'start'});
+ const a=window.betAccess;
+ if(!a?.active||a.uid!==window.betUsuarioId||a.expires<=Date.now()||!window.betFetchPaidLesson){
+  msg.textContent='Aula exclusiva. Entre na sua conta e consulte sua assinatura.';return;
+ }
+ const request=++betViewRequest;
+ try{
+  const data=await window.betFetchPaidLesson(id);
+  if(request!==betViewRequest)return;
+  if(data.schemaVersion!==1||typeof data.body!=='string'||!Array.isArray(data.sounds)||!Array.isArray(data.quiz)||!data.quiz.length||!data.tutor||!Array.isArray(data.tutor.questions))throw new Error('format');
+  const i=Number(id)-1;
+  betPaidCurrent={index:i,id,sounds:data.sounds,quiz:data.quiz,tutor:data.tutor};
+  // HTML editorial produzido exclusivamente pela administração, em coleção sem escrita de clientes.
+  view.innerHTML='';
+  const tag=document.createElement('span');tag.className='tag';tag.textContent='Aula '+id+' · BET Completo';
+  const heading=document.createElement('h2');heading.textContent=entry.title;
+  view.append(tag,heading);
+  const content=document.createElement('div');content.innerHTML=data.body+lessonAudioPanel(i)+tutorPanel(i);view.appendChild(content);
+  const finish=document.createElement('button');finish.type='button';finish.className='primary';finish.textContent='Concluir aula';finish.onclick=()=>betCompletePaid(i);view.appendChild(finish);
+  initTutor(i);
+ }catch(e){
+  if(request!==betViewRequest)return;
+  window.betClearPaidView();view.classList.remove('hidden');
+  const error=document.createElement('p');error.textContent=e.message==='missing'?'Esta aula está em preparação para disponibilização.':'Não foi possível abrir a aula. Consulte sua assinatura e tente novamente.';view.appendChild(error);
+ }
+}
+function answerM2(button,lessonIndex,qIndex,option){
+ if(!betPaidCanUse(lessonIndex))return;
+ const question=button.closest('.m2-question'),data=betPaidCurrent.quiz[qIndex];
+ if(!question||!data||question.dataset.solved==='true')return;
+ question.querySelectorAll('.choice').forEach(b=>b.classList.remove('correct','wrong'));
+ const ok=option===data.correct;
+ button.classList.add(ok?'correct':'wrong');
+ question.querySelector('.feedback').textContent=ok?'Muito bem! '+data.feedback:'Ainda não. Observe as letras e tente outra vez.';
+ if(ok){question.dataset.solved='true';question.querySelectorAll('.choice').forEach(b=>b.disabled=true);}
+ const total=betPaidCurrent.quiz.length;
+ const done=document.querySelectorAll('#m2Quiz .m2-question[data-solved="true"]').length;
+ document.getElementById('m2Score').textContent=done+' de '+total+' desafios concluídos.'+(done===total?' Parabéns!':'');
+}
+function betCompletePaid(i){
+ if(!betPaidCanUse(i))return;
+ const quiz=document.getElementById('m2Quiz'),total=betPaidCurrent.quiz.length;
+ if(!quiz||quiz.querySelectorAll('.m2-question[data-solved="true"]').length<total){
+  const score=document.getElementById('m2Score');if(score)score.textContent='Conclua os desafios antes de avançar.';quiz?.scrollIntoView({behavior:'smooth',block:'start'});return;
+ }
+ const id=betPaidCurrent.id;
+ try{localStorage.setItem(betPaidProgressKey(),JSON.stringify([...new Set([...betPaidCompleted(),id])]));}catch(e){}
+ window.betClearPaidView();window.betRenderPaidCatalog();
+ const view=document.getElementById('bet-paid-view');view.classList.remove('hidden');
+ const heading=document.createElement('h2');heading.textContent='Parabéns! Aula concluída.';
+ const p=document.createElement('p');p.textContent='O progresso das aulas exclusivas é registrado neste navegador durante a implantação.';
+ view.append(heading,p);
+ const next=betPaidCatalog[betPaidCatalog.findIndex(l=>l.id===id)+1];
+ if(next){const btn=document.createElement('button');btn.type='button';btn.className='primary';btn.textContent='Próxima aula';btn.onclick=()=>betOpenPaid(next.id);view.appendChild(btn);}
+ view.scrollIntoView({behavior:'smooth',block:'start'});
+}
+window.betRenderPaidCatalog();
 
 /* Reconhecimento auditivo: a resposta só aparece após o aluno escolher. */
 const listeningWords=[
