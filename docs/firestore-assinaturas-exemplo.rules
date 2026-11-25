@@ -1,0 +1,17 @@
+// TRECHO para inserir no match /databases/{database}/documents existente.
+// Auditar matches mais amplos: regras permissivas sobrepostas podem liberar acesso.
+// Não implantar este trecho isoladamente.
+function betHasActiveAccess() {
+  return request.auth != null
+    && exists(/databases/$(database)/documents/betEntitlements/$(request.auth.uid))
+    && get(/databases/$(database)/documents/betEntitlements/$(request.auth.uid)).data.active == true
+    && get(/databases/$(database)/documents/betEntitlements/$(request.auth.uid)).data.validUntil > request.time;
+}
+match /betEntitlements/{uid} {
+  allow get: if request.auth != null && request.auth.uid == uid;
+  allow list, create, update, delete: if false;
+}
+match /betPaidLessons/{lessonId} {
+  allow get: if lessonId in ['06','07','08','09','10'] && betHasActiveAccess();
+  allow list, create, update, delete: if false;
+}
