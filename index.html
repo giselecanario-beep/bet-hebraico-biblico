@@ -461,6 +461,7 @@ main{max-width:1020px;padding:28px 20px 72px}
 .bet-resume-card{margin:18px 0;padding:20px;border:1px solid var(--line);border-left:4px solid var(--wine);background:#fffaf3;border-radius:10px}.bet-resume-card h2{margin:7px 0;color:var(--wine);font-size:clamp(22px,5vw,28px)}.bet-resume-card p{margin:8px 0}.bet-resume-card button{min-height:44px}.bet-resume-status{font:13px/1.5 Arial,sans-serif;color:var(--muted)}.bet-restart{margin:8px 0 18px}
 .bet-lesson-next{margin:28px 0 4px;padding:20px;border:1px solid var(--line);border-top:4px solid var(--wine);border-radius:10px;background:#fffaf3;scroll-margin-top:110px}.bet-lesson-next h3{color:var(--wine);font-size:clamp(22px,5vw,28px);line-height:1.35;margin:9px 0}.bet-lesson-next .bet-next-action{display:block;width:100%;min-height:48px;margin:16px 0 8px;white-space:normal}.bet-lesson-next .secondary{min-height:44px}
 .bet-next-practice{margin-top:4px}.m2-question{scroll-margin-top:110px}
+.bet-lesson-next .bet-build-label{display:block;margin:12px 0 0;font:11px/1.4 Arial,sans-serif;color:var(--muted)}#bet-paid-view{overflow-anchor:none}#bet-paid-view h2:focus{outline:none}
 </style>
   
 </head>
@@ -1643,7 +1644,7 @@ function betUpdatePaidFooter(i){
  if(!section)return;
  const next=betNextLesson(i),finished=betPaidLessonFinished(i),already=betPaidCompleted().includes(betPaidCurrent.id);
  const button=section.querySelector('.bet-next-action'),note=section.querySelector('.bet-next-note'),practice=section.querySelector('.bet-next-practice');
- if(button)button.textContent=next?(already?'Ir para a próxima aula →':finished?'Concluir e ir para a próxima aula →':'Ir para a próxima aula →'):(already?'Finalizar revisão':'Concluir aula');
+ if(button)button.textContent=next?'Ir para a aula '+next.id+' →':(already?'Finalizar revisão':'Concluir aula');
  if(note)note.textContent=already?'Esta aula já está concluída.':finished?'Todos os desafios resolvidos. Seu progresso será registrado.':next?'Você pode avançar agora. Esta aula ficará pendente até concluir os desafios.':'Resolva os desafios restantes para concluir esta aula.';
  if(practice)practice.classList.toggle('hidden',finished);
 }
@@ -1653,11 +1654,12 @@ function betLessonFooter(i,view){
  const caption=document.createElement('span');caption.className='section-overline';caption.textContent=next?'PRÓXIMA ETAPA':'CONCLUSÃO';section.appendChild(caption);
  const heading=document.createElement('h3');heading.textContent=next?'Aula '+next.id+' · '+next.title:'Você chegou à última aula disponível';section.appendChild(heading);
  const note=document.createElement('p');note.className='small bet-next-note';note.textContent=next?(i>=5?'Conclua os desafios desta aula e continue seus estudos.':next.paid?'A próxima aula faz parte do BET Completo.':'Seu progresso será registrado ao avançar.'):'Registre sua conclusão para acompanhar seu progresso.';section.appendChild(note);
- const button=document.createElement('button');button.type='button';button.className='primary bet-next-action';button.textContent=next?'Concluir e ir para a próxima aula →':'Concluir aula';button.onclick=()=>i<lessons.length?completeLesson(i):betCompletePaid(i);section.appendChild(button);
+ const button=document.createElement('button');button.type='button';button.className='primary bet-next-action';button.textContent=next?'Ir para a aula '+next.id+' →':'Concluir aula';button.onclick=()=>{if(i<lessons.length)completeLesson(i);else if(next)void betNavigatePaidNext(i,next.id,button);else betCompletePaid(i);};section.appendChild(button);
  if(i<lessons.length){const practice=document.createElement('button');practice.type='button';practice.className='secondary';practice.textContent='Praticar letras';practice.onclick=()=>go('exercicios');section.appendChild(practice);}
  if(i>=lessons.length){
   const practice=document.createElement('button');practice.type='button';practice.className='secondary bet-next-practice';practice.textContent='Voltar aos desafios';practice.onclick=()=>{const quiz=document.getElementById('m2Quiz');const first=quiz?.querySelector('.m2-question:not([data-solved="true"])');(first||quiz)?.scrollIntoView({behavior:'smooth',block:'start'});};section.appendChild(practice);
  }
+ const build=document.createElement('small');build.className='bet-build-label';build.textContent='BET · navegação 17';section.appendChild(build);
  view.appendChild(section);
  if(i>=lessons.length)betUpdatePaidFooter(i);
 }
@@ -1727,7 +1729,7 @@ async function betOpenPaid(id,resume=null){
  if(free){free.innerHTML='';free.classList.add('hidden');}
  stopHebrewAudio();currentTutorLesson=-1;lastTutorAnswer='';
  view.classList.remove('hidden');
- const msg=document.createElement('p');msg.textContent='Verificando acesso no servidor…';view.appendChild(msg);
+ const msg=document.createElement('p');msg.textContent='Abrindo aula '+id+' — '+entry.title+'…';view.appendChild(msg);
  view.scrollIntoView({behavior:'instant',block:'start'});
  const a=window.betAccess;
  if(!a?.active||a.uid!==window.betUsuarioId||a.expires<=Date.now()||!window.betFetchPaidLesson){
@@ -1743,16 +1745,17 @@ async function betOpenPaid(id,resume=null){
   // HTML editorial produzido exclusivamente pela administração, em coleção sem escrita de clientes.
   view.innerHTML='';
   const tag=document.createElement('span');tag.className='tag';tag.textContent='Aula '+id+' · BET Completo';
-  const heading=document.createElement('h2');heading.textContent=entry.title;
+  const heading=document.createElement('h2');heading.textContent='Aula '+id+' — '+entry.title;heading.tabIndex=-1;
   view.append(tag,heading);
   const content=document.createElement('div');content.innerHTML=data.body+lessonAudioPanel(i)+tutorPanel(i);view.appendChild(content);
   betLessonFooter(i,view);
   initTutor(i);
   betResumeAttach(i,view,resume);
+  if(resume?.anchor==='start'&&resume.lessonId===id){requestAnimationFrame(()=>{if(request===betViewRequest&&betPaidCurrent?.id===id){heading.focus({preventScroll:true});view.scrollIntoView({behavior:'instant',block:'start'});}});}
  }catch(e){
   if(request!==betViewRequest)return;
   window.betClearPaidView();view.classList.remove('hidden');
-  const error=document.createElement('p');error.textContent=e.message==='missing'?'Esta aula está em preparação para disponibilização.':'Não foi possível abrir a aula. Consulte sua assinatura e tente novamente.';view.appendChild(error);
+  const error=document.createElement('p');error.textContent=e.message==='missing'?'A aula '+id+' está em preparação para disponibilização.':'Não foi possível abrir a aula '+id+'. Consulte sua assinatura e tente novamente.';view.appendChild(error);const retry=document.createElement('button');retry.type='button';retry.className='secondary';retry.textContent='Tentar abrir aula '+id;retry.onclick=async()=>{await window.betAtualizarAssinatura?.();await betOpenPaid(id,resume);};view.appendChild(retry);
  }
 }
 function answerM2(button,lessonIndex,qIndex,option){
@@ -1768,6 +1771,23 @@ function answerM2(button,lessonIndex,qIndex,option){
  const done=document.querySelectorAll('#m2Quiz .m2-question[data-solved="true"]').length;
  document.getElementById('m2Score').textContent=done+' de '+total+' desafios concluídos.'+(done===total?' Parabéns!':'');
  betUpdatePaidFooter(lessonIndex);
+}
+async function betNavigatePaidNext(i,targetId,button){
+ const next=betNextLesson(i);
+ if(!next||next.id!==targetId||!next.paid||!betPaidCanUse(i)||button.disabled)return;
+ button.disabled=true;button.textContent='Abrindo aula '+targetId+'…';
+ betResumeInteracted=true;betResumeAutoDone=true;
+ // Separar o salvamento do destino da navegação: o destino nunca depende do marcador anterior.
+ const finished=betPaidLessonFinished(i);
+ if(finished){
+  try{localStorage.setItem(betPaidProgressKey(),JSON.stringify([...new Set([...betPaidCompleted(),betPaidCurrent.id])]));}catch(e){}
+ }
+ try{window.betResumeCapture?.(true);}catch(e){console.warn('Marcador anterior não salvo',e);}
+ window.betResumeDetach?.();
+ const destination={lessonId:targetId,anchor:'start',offset:0,solved:[],paidCompleted:betPaidCompleted(),clientTime:Date.now()};
+ try{betResumeCommit(destination,true);}catch(e){console.warn('Marcador de destino não salvo',e);}
+ try{await betOpenPaid(targetId,destination);}
+ catch(e){console.error('Falha ao avançar para aula '+targetId,e);button.disabled=false;button.textContent='Tentar abrir aula '+targetId+' →';}
 }
 function betCompletePaid(i){
  if(!betPaidCanUse(i))return;
