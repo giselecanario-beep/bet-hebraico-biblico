@@ -390,7 +390,7 @@ main{max-width:1020px;padding:28px 20px 72px}
 
 
 /* Cliques com áudio nas vogais. Botões semânticos para mouse, toque e teclado. */
-.vowel-card-audio{appearance:none;width:100%;cursor:pointer;color:inherit;font:inherit;line-height:normal}
+.vowel-audio-group{display:flex;flex-direction:column;gap:6px;min-width:0}.vowel-audio-group .vowel-card-audio{flex:1}.vowel-name-hebrew{font:20px 'Times New Roman',serif;color:var(--wine)}.vowel-sound-only{font:600 13px Arial,sans-serif;padding:9px 5px;border:1px solid var(--line);border-radius:7px;background:#fffaf4;color:var(--wine);cursor:pointer;min-height:40px}.vowel-card-audio{appearance:none;width:100%;cursor:pointer;color:inherit;font:inherit;line-height:normal}
 .vowel-card-audio:hover{border-color:#b89277;background:#fff7ef;box-shadow:0 6px 19px rgba(83,40,40,.08)}
 .vowel-card-audio:active{transform:scale(.985)}
 .vowel-card-audio:focus-visible{outline:3px solid var(--wine);outline-offset:4px}
@@ -625,15 +625,15 @@ document.getElementById("btn-recuperar")?.addEventListener("click", async () => 
   </div>
   <section aria-labelledby="vowels-five-heading">
     <h2 id="vowels-five-heading" class="vowel-section-heading">Cinco sons para começar</h2>
-    <p class="vowel-help">Toque em cada cartão para ouvir a vogal. Toque novamente para repetir. O Álef (<bdi lang="he">א</bdi>) serve aqui como apoio visual para mostrar o sinal; há mais de um sinal para algumas vogais. Usamos cinco sons básicos: a, e, i, o e u.</p>
+    <p class="vowel-help">Toque no cartão para ouvir o nome do sinal em hebraico. Use o botão abaixo para escutar somente o som da vogal. O Álef (<bdi lang="he">א</bdi>) serve aqui como apoio visual para mostrar o sinal; há mais de um sinal para algumas vogais. Usamos cinco sons básicos: a, e, i, o e u.</p>
     <div class="vowel-grid">
-      <button type="button" class="vowel-card vowel-card-audio" onclick="playVowelSound(0)" aria-label="Ouvir a vogal A, sinal Pataḥ. Toque novamente para repetir."><span class="vowel-latin">A</span><span class="vowel-hebrew" lang="he" dir="rtl">אַ</span><strong>Pataḥ</strong><span class="vowel-description">Um tracinho embaixo da letra.</span><span class="vowel-callout"><span aria-hidden="true">🔊 </span>Ouvir som de a</span></button>
-      <button type="button" class="vowel-card vowel-card-audio" onclick="playVowelSound(1)" aria-label="Ouvir a vogal E, sinal Segol. Toque novamente para repetir."><span class="vowel-latin">E</span><span class="vowel-hebrew" lang="he" dir="rtl">אֶ</span><strong>Segol</strong><span class="vowel-description">Três pontinhos sob a letra.</span><span class="vowel-callout"><span aria-hidden="true">🔊 </span>Ouvir som de e</span></button>
-      <button type="button" class="vowel-card vowel-card-audio" onclick="playVowelSound(2)" aria-label="Ouvir a vogal I, sinal Ḥiriq. Toque novamente para repetir."><span class="vowel-latin">I</span><span class="vowel-hebrew" lang="he" dir="rtl">אִ</span><strong>Ḥiriq</strong><span class="vowel-description">Um pontinho embaixo da letra.</span><span class="vowel-callout"><span aria-hidden="true">🔊 </span>Ouvir som de i</span></button>
-      <button type="button" class="vowel-card vowel-card-audio" onclick="playVowelSound(3)" aria-label="Ouvir a vogal O, sinal Ḥolam. Toque novamente para repetir."><span class="vowel-latin">O</span><span class="vowel-hebrew" lang="he" dir="rtl">אֹ</span><strong>Ḥolam</strong><span class="vowel-description">Um pontinho acima da letra.</span><span class="vowel-callout"><span aria-hidden="true">🔊 </span>Ouvir som de o</span></button>
-      <button type="button" class="vowel-card vowel-card-audio" onclick="playVowelSound(4)" aria-label="Ouvir a vogal U, sinal Qibbuts. Toque novamente para repetir."><span class="vowel-latin">U</span><span class="vowel-hebrew" lang="he" dir="rtl">אֻ</span><strong>Qibbuts</strong><span class="vowel-description">Três pontinhos inclinados abaixo da letra.</span><span class="vowel-callout"><span aria-hidden="true">🔊 </span>Ouvir som de u</span></button>
+      <div class="vowel-audio-group"><button type="button" class="vowel-card vowel-card-audio" onclick="playVowelName(0)" aria-label="Ouvir o nome Pataḥ em hebraico."><span class="vowel-latin">A</span><span class="vowel-hebrew" lang="he" dir="rtl">אַ</span><strong>Pataḥ</strong><span lang="he" dir="rtl" class="vowel-name-hebrew">פַּתָּח</span><span class="vowel-description">Um tracinho embaixo da letra.</span><span class="vowel-callout"><span aria-hidden="true">🔊 </span>Ouvir Pataḥ</span></button><button type="button" class="vowel-sound-only" onclick="playVowelSound(0)" aria-label="Ouvir somente o som de A">🔊 Som de a</button></div>
+      <div class="vowel-audio-group"><button type="button" class="vowel-card vowel-card-audio" onclick="playVowelName(1)" aria-label="Ouvir o nome Segol em hebraico."><span class="vowel-latin">E</span><span class="vowel-hebrew" lang="he" dir="rtl">אֶ</span><strong>Segol</strong><span lang="he" dir="rtl" class="vowel-name-hebrew">סֶגוֹל</span><span class="vowel-description">Três pontinhos sob a letra.</span><span class="vowel-callout"><span aria-hidden="true">🔊 </span>Ouvir Segol</span></button><button type="button" class="vowel-sound-only" onclick="playVowelSound(1)" aria-label="Ouvir somente o som de E">🔊 Som de e</button></div>
+      <div class="vowel-audio-group"><button type="button" class="vowel-card vowel-card-audio" onclick="playVowelName(2)" aria-label="Ouvir o nome Ḥiriq em hebraico."><span class="vowel-latin">I</span><span class="vowel-hebrew" lang="he" dir="rtl">אִ</span><strong>Ḥiriq</strong><span lang="he" dir="rtl" class="vowel-name-hebrew">חִירִיק</span><span class="vowel-description">Um pontinho embaixo da letra.</span><span class="vowel-callout"><span aria-hidden="true">🔊 </span>Ouvir Ḥiriq</span></button><button type="button" class="vowel-sound-only" onclick="playVowelSound(2)" aria-label="Ouvir somente o som de I">🔊 Som de i</button></div>
+      <div class="vowel-audio-group"><button type="button" class="vowel-card vowel-card-audio" onclick="playVowelName(3)" aria-label="Ouvir o nome Ḥolam em hebraico."><span class="vowel-latin">O</span><span class="vowel-hebrew" lang="he" dir="rtl">אֹ</span><strong>Ḥolam</strong><span lang="he" dir="rtl" class="vowel-name-hebrew">חוֹלָם</span><span class="vowel-description">Um pontinho acima da letra.</span><span class="vowel-callout"><span aria-hidden="true">🔊 </span>Ouvir Ḥolam</span></button><button type="button" class="vowel-sound-only" onclick="playVowelSound(3)" aria-label="Ouvir somente o som de O">🔊 Som de o</button></div>
+      <div class="vowel-audio-group"><button type="button" class="vowel-card vowel-card-audio" onclick="playVowelName(4)" aria-label="Ouvir o nome Qibbuts em hebraico."><span class="vowel-latin">U</span><span class="vowel-hebrew" lang="he" dir="rtl">אֻ</span><strong>Qibbuts</strong><span lang="he" dir="rtl" class="vowel-name-hebrew">קֻבּוּץ</span><span class="vowel-description">Três pontinhos inclinados abaixo da letra.</span><span class="vowel-callout"><span aria-hidden="true">🔊 </span>Ouvir Qibbuts</span></button><button type="button" class="vowel-sound-only" onclick="playVowelSound(4)" aria-label="Ouvir somente o som de U">🔊 Som de u</button></div>
     </div>
-    <p id="vowelAudioStatus" class="audio-status vowel-audio-status" role="status" aria-live="polite">Toque em uma vogal para ouvir a gravação em hebraico. Toque novamente para repetir.</p>
+    <p id="vowelAudioStatus" class="audio-status vowel-audio-status" role="status" aria-live="polite">Toque no cartão para ouvir o nome em hebraico ou no botão inferior para ouvir o som. Os nomes usam uma voz hebraica do aparelho, quando disponível.</p>
   </section>
   <div class="panel vowel-more">
     <h2>Mas por que há outros sinais?</h2>
@@ -978,7 +978,15 @@ const betVowelAudio=[
  {hebrew:'אֹ',label:'vogal O'},
  {hebrew:'אֻ',label:'vogal U'}
 ];
+const betVowelNames=[{"name":"Pataḥ","hebrew":"פַּתָּח"},{"name":"Segol","hebrew":"סֶגוֹל"},{"name":"Ḥiriq","hebrew":"חִירִיק"},{"name":"Ḥolam","hebrew":"חוֹלָם"},{"name":"Qibbuts","hebrew":"קֻבּוּץ"}];
+function playVowelName(index){
+ const item=betVowelNames[index];if(!item)return;
+ ++betRecordedRequest;
+ if(betRecordedAudio){betRecordedAudio.pause();betRecordedAudio=null;}
+ speakHebrew(item.hebrew,item.name,'vowelAudioStatus');
+}
 function playVowelSound(index){
+ ++hebrewSpeechRequestId;clearHebrewVoiceWait();
  const item=betVowelAudio[index];
  if(item)playBetRecording(betLocalVowels[index],item.label,'vowelAudioStatus');
 }
