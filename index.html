@@ -506,7 +506,7 @@ function betAccessReset(){
  ++paidReadRequest;
  if(expiryTimer!==null)clearTimeout(expiryTimer);
  expiryTimer=null;
- window.betAccess={uid:null,active:false,expires:0};
+ window.betAccess={uid:null,active:false,owner:false,expires:0};
  window.betClearPaidView?.();
  window.betRenderPaidCatalog?.();
 }
@@ -522,11 +522,12 @@ window.betConsultarAssinatura=async(user)=>{
   if(request!==subscriptionRequest||auth.currentUser?.uid!==user.uid)return;
   const data=result.exists()?result.data():null;
   const expires=data?.validUntil?.toMillis?.();
-  const active=data?.active===true&&Number.isFinite(expires)&&expires>Date.now();
-  window.betAccess={uid:user.uid,active,expires:active?expires:0};
-  el.textContent=active?'Assinatura ativa. Escolha uma aula exclusiva abaixo.':'Nenhuma autorização ativa encontrada. Se já assinou, aguarde a confirmação.';
+  const owner=data?.active===true&&data?.role==='owner';
+  const active=owner||(data?.active===true&&Number.isFinite(expires)&&expires>Date.now());
+  window.betAccess={uid:user.uid,active,owner,expires:owner?Infinity:active?expires:0};
+  el.textContent=owner?'Acesso permanente de proprietária.':active?'Assinatura ativa. Escolha uma aula exclusiva abaixo.':'Nenhuma autorização ativa encontrada. Se já assinou, aguarde a confirmação.';
   window.betRenderPaidCatalog?.();
-  if(active)expiryTimer=setTimeout(()=>window.betConsultarAssinatura(auth.currentUser),Math.min(Math.max(0,expires-Date.now()),2147483647));
+  if(active&&!owner)expiryTimer=setTimeout(()=>window.betConsultarAssinatura(auth.currentUser),Math.min(Math.max(0,expires-Date.now()),2147483647));
  }catch(e){
   if(request===subscriptionRequest)el.textContent='Não foi possível consultar a assinatura. Verifique a conexão e tente novamente.';
  }
