@@ -462,6 +462,7 @@ main{max-width:1020px;padding:28px 20px 72px}
 .bet-lesson-next{margin:28px 0 4px;padding:20px;border:1px solid var(--line);border-top:4px solid var(--wine);border-radius:10px;background:#fffaf3;scroll-margin-top:110px}.bet-lesson-next h3{color:var(--wine);font-size:clamp(22px,5vw,28px);line-height:1.35;margin:9px 0}.bet-lesson-next .bet-next-action{display:block;width:100%;min-height:48px;margin:16px 0 8px;white-space:normal}.bet-lesson-next .secondary{min-height:44px}
 .bet-next-practice{margin-top:4px}.m2-question{scroll-margin-top:110px}
 .bet-lesson-next .bet-build-label{display:block;margin:12px 0 0;font:11px/1.4 Arial,sans-serif;color:var(--muted)}#bet-paid-view{overflow-anchor:none}#bet-paid-view h2:focus{outline:none}
+#bet-checkout-button[hidden]{display:none!important}
 </style>
   
 </head>
@@ -515,13 +516,35 @@ window.betResumeCloudWrite=async(uid,record)=>{
  await setDoc(resumeRef(uid),{...record,updatedAt:serverTimestamp()});
 };
 
+// Checkout comercial: manter desativado até a aprovação dos testes de lançamento.
+const BET_CHECKOUT_ENABLED=false;
+const BET_CHECKOUT_URL='https://mpago.la/1D3vZWm';
+function betCheckoutCanOpen(enabled,uid,access){
+ return enabled===true&&typeof uid==='string'&&uid.length>0&&access?.uid===uid&&access.checked===true&&access.active===false&&access.owner!==true;
+}
+function betUpdateCheckout(){
+ const button=document.getElementById('bet-checkout-button'),note=document.getElementById('bet-checkout-note');
+ if(!button||!note)return;
+ const user=auth.currentUser,access=window.betAccess;
+ const active=!!(user&&access?.uid===user.uid&&access.active&&access.expires>Date.now());
+ button.hidden=active;button.disabled=!betCheckoutCanOpen(BET_CHECKOUT_ENABLED,user?.uid,access);
+ button.textContent=BET_CHECKOUT_ENABLED?'Assinar pelo Mercado Pago':'Assinaturas em preparação';
+ note.textContent=active?(access.owner?'Seu acesso de proprietária é gratuito e permanente.':'Sua assinatura já está ativa.') : !BET_CHECKOUT_ENABLED?'Vendas ainda não abertas. Nenhum pagamento é solicitado nesta versão.':!user?'Entre na sua conta BET antes de assinar.':!access?.checked?'Consulte sua assinatura antes de prosseguir.':'Sete dias de teste grátis; depois, R$ 19,90 por mês. Use o mesmo e-mail da sua conta BET no Mercado Pago, quando possível. O acesso depende da conferência administrativa da assinatura. Confira os termos e o cancelamento no checkout.';
+}
+window.betOpenCheckout=()=>{
+ const user=auth.currentUser;
+ if(!betCheckoutCanOpen(BET_CHECKOUT_ENABLED,user?.uid,window.betAccess))return;
+ if(!confirm('Você será direcionado ao Mercado Pago. A autorização das aulas depende da confirmação da assinatura; não será imediata. Deseja continuar?'))return;
+ window.location.assign(BET_CHECKOUT_URL);
+};
 // O Firestore verifica a autorização no servidor; nenhuma permissão é criada pelo navegador.
 let subscriptionRequest=0, paidReadRequest=0, expiryTimer=null;
 function betAccessReset(){
  ++paidReadRequest;
  if(expiryTimer!==null)clearTimeout(expiryTimer);
  expiryTimer=null;
- window.betAccess={uid:null,active:false,owner:false,expires:0};
+ window.betAccess={uid:null,active:false,owner:false,expires:0,checked:false};
+ betUpdateCheckout();
  window.betClearPaidView?.();
  window.betRenderPaidCatalog?.();
 }
@@ -534,6 +557,8 @@ window.betConsultarAssinatura=async(user)=>{
  if(!el)return;
  if(!user){el.textContent='Entre na sua conta BET para consultar a assinatura.';return;}
  el.textContent='Consultando assinatura…';
+ if(window.betAccess)window.betAccess.checked=false;
+ betUpdateCheckout();
  try{
   const result=await getDocFromServer(doc(db,'betEntitlements',user.uid));
   if(request!==subscriptionRequest||auth.currentUser?.uid!==user.uid)return;
@@ -542,7 +567,8 @@ window.betConsultarAssinatura=async(user)=>{
   const owner=data?.active===true&&data?.role==='owner';
   const active=owner||(data?.active===true&&Number.isFinite(expires)&&expires>Date.now());
   if(!active){window.betResumeCapture?.(true);betAccessReset();}
-  window.betAccess={uid:user.uid,active,owner,expires:owner?Infinity:active?expires:0};
+  window.betAccess={uid:user.uid,active,owner,expires:owner?Infinity:active?expires:0,checked:true};
+  betUpdateCheckout();
   el.textContent=owner?'Acesso permanente de proprietária.':active?'Assinatura ativa. Escolha uma aula exclusiva abaixo.':'Nenhuma autorização ativa encontrada. Se já assinou, aguarde a confirmação.';
   window.betRenderPaidCatalog?.();
   if(active&&!owner)expiryTimer=setTimeout(()=>window.betConsultarAssinatura(auth.currentUser),Math.min(Math.max(0,expires-Date.now()),2147483647));
@@ -781,7 +807,7 @@ document.getElementById("btn-recuperar")?.addEventListener("click", async () => 
 <p>Continue sua jornada com cinco novas aulas. Complete o alfabeto hebraico, conheça as cinco formas finais e aprenda a ler palavras e pequenas expressões bíblicas.</p>
 <div id="bet-paid-list" class="bet-module-outline" aria-label="Aulas do módulo 2"></div><article id="bet-paid-view" class="panel hidden" aria-live="polite"></article>
 <p class="bet-module-facts">5 aulas · 22 desafios interativos · vocabulário e leitura guiada</p>
-<div class="bet-subscription-preview"><span class="section-overline">BET COMPLETO MENSAL</span><h3>R$ 19,90 por mês</h3><p>Plano previsto: sete dias de teste grátis, acesso aos módulos exclusivos durante a assinatura e novos conteúdos progressivamente.</p><p id="bet-subscription-state" role="status" aria-live="polite">Entre na sua conta BET para consultar a assinatura.</p><button type="button" class="secondary" onclick="showAccountPanel()">Minha conta</button><button type="button" class="secondary" onclick="window.betAtualizarAssinatura?.()">Consultar assinatura</button><button type="button" class="primary" disabled>Assinar pelo Mercado Pago · em preparação</button><p class="small">O checkout existente será reativado somente depois dos testes de segurança e da disponibilização das aulas. Nenhum pagamento é solicitado nesta versão.</p></div>
+<div class="bet-subscription-preview"><span class="section-overline">BET COMPLETO MENSAL</span><h3>R$ 19,90 por mês</h3><p>Sete dias de teste grátis. Depois, R$ 19,90 por mês, com acesso aos módulos exclusivos durante a assinatura. Novos conteúdos serão incluídos progressivamente.</p><p id="bet-subscription-state" role="status" aria-live="polite">Entre na sua conta BET para consultar a assinatura.</p><button type="button" class="secondary" onclick="showAccountPanel()">Minha conta</button><button type="button" class="secondary" onclick="window.betAtualizarAssinatura?.()">Consultar assinatura</button><button type="button" id="bet-checkout-button" class="primary" disabled onclick="window.betOpenCheckout?.()">Assinaturas em preparação</button><p id="bet-checkout-note" class="small" role="status">Vendas ainda não abertas. Nenhum pagamento é solicitado nesta versão.</p></div>
 </section><div class="beta-panel"><h2>Terminou de testar?</h2><p class="small">Conte o que gostou e o que precisa melhorar.</p><button class="secondary" onclick="go('testes')">Avaliar minha experiência</button></div></section>
 <section id="testes" class="page hidden" aria-labelledby="beta-test-title">
  <span class="beta-label">Participação gratuita · versão experimental</span>
