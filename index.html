@@ -1178,7 +1178,7 @@ function playVowelName(index){
  const item=betVowelNames[index];if(!item)return;
  ++betRecordedRequest;
  if(betRecordedAudio){betRecordedAudio.pause();betRecordedAudio=null;}
- speakHebrew(item.hebrew,item.name,'vowelAudioStatus');
+ playBetRecording('./assets/audio/nome-'+['patah','segol','hiriq','holam','qibbuts'][index]+'.mp3',item.name,'vowelAudioStatus');
 }
 function playVowelSound(index){
  ++hebrewSpeechRequestId;clearHebrewVoiceWait();
