@@ -520,7 +520,7 @@ window.betResumeCloudWrite=async(uid,record)=>{
 const BET_CHECKOUT_ENABLED=false;
 const BET_CHECKOUT_URL='https://mpago.la/1D3vZWm';
 function betCheckoutCanOpen(enabled,uid,access){
- return enabled===true&&typeof uid==='string'&&uid.length>0&&access?.uid===uid&&access.checked===true&&access.active===false&&access.owner!==true;
+ return enabled===true&&typeof uid==='string'&&uid.length>0&&access?.uid===uid&&access.checked===true&&access.active===false&&access.owner!==true&&access.collaborator!==true;
 }
 function betUpdateCheckout(){
  const button=document.getElementById('bet-checkout-button'),note=document.getElementById('bet-checkout-note');
@@ -529,7 +529,7 @@ function betUpdateCheckout(){
  const active=!!(user&&access?.uid===user.uid&&access.active&&access.expires>Date.now());
  button.hidden=active;button.disabled=!betCheckoutCanOpen(BET_CHECKOUT_ENABLED,user?.uid,access);
  button.textContent=BET_CHECKOUT_ENABLED?'Assinar pelo Mercado Pago':'Assinaturas em preparação';
- note.textContent=active?(access.owner?'Seu acesso de proprietária é gratuito e permanente.':'Sua assinatura já está ativa.') : !BET_CHECKOUT_ENABLED?'Vendas ainda não abertas. Nenhum pagamento é solicitado nesta versão.':!user?'Entre na sua conta BET antes de assinar.':!access?.checked?'Consulte sua assinatura antes de prosseguir.':'Sete dias de teste grátis; depois, R$ 19,90 por mês. Use o mesmo e-mail da sua conta BET no Mercado Pago, quando possível. O acesso depende da conferência administrativa da assinatura. Confira os termos e o cancelamento no checkout.';
+ note.textContent=active?(access.owner?'Seu acesso de proprietária é gratuito e permanente.':access.collaborator?'Seu acesso de colaborador é gratuito e permanente.':'Sua assinatura já está ativa.') : !BET_CHECKOUT_ENABLED?'Vendas ainda não abertas. Nenhum pagamento é solicitado nesta versão.':!user?'Entre na sua conta BET antes de assinar.':!access?.checked?'Consulte sua assinatura antes de prosseguir.':'Sete dias de teste grátis; depois, R$ 19,90 por mês. Use o mesmo e-mail da sua conta BET no Mercado Pago, quando possível. O acesso depende da conferência administrativa da assinatura. Confira os termos e o cancelamento no checkout.';
 }
 window.betOpenCheckout=()=>{
  const user=auth.currentUser;
@@ -543,7 +543,7 @@ function betAccessReset(){
  ++paidReadRequest;
  if(expiryTimer!==null)clearTimeout(expiryTimer);
  expiryTimer=null;
- window.betAccess={uid:null,active:false,owner:false,expires:0,checked:false};
+ window.betAccess={uid:null,active:false,owner:false,collaborator:false,expires:0,checked:false};
  betUpdateCheckout();
  window.betClearPaidView?.();
  window.betRenderPaidCatalog?.();
@@ -565,13 +565,15 @@ window.betConsultarAssinatura=async(user)=>{
   const data=result.exists()?result.data():null;
   const expires=data?.validUntil?.toMillis?.();
   const owner=data?.active===true&&data?.role==='owner';
-  const active=owner||(data?.active===true&&Number.isFinite(expires)&&expires>Date.now());
+  const collaborator=data?.active===true&&data?.role==='collaborator';
+  const permanent=owner||collaborator;
+  const active=permanent||(data?.active===true&&Number.isFinite(expires)&&expires>Date.now());
   if(!active){window.betResumeCapture?.(true);betAccessReset();}
-  window.betAccess={uid:user.uid,active,owner,expires:owner?Infinity:active?expires:0,checked:true};
+  window.betAccess={uid:user.uid,active,owner,collaborator,expires:permanent?Infinity:active?expires:0,checked:true};
   betUpdateCheckout();
-  el.textContent=owner?'Acesso permanente de proprietária.':active?'Assinatura ativa. Escolha uma aula exclusiva abaixo.':'Nenhuma autorização ativa encontrada. Se já assinou, aguarde a confirmação.';
+  el.textContent=owner?'Acesso permanente de proprietária.':collaborator?'Acesso permanente de colaborador.':active?'Assinatura ativa. Escolha uma aula exclusiva abaixo.':'Nenhuma autorização ativa encontrada. Se já assinou, aguarde a confirmação.';
   window.betRenderPaidCatalog?.();
-  if(active&&!owner)expiryTimer=setTimeout(()=>window.betConsultarAssinatura(auth.currentUser),Math.min(Math.max(0,expires-Date.now()),2147483647));
+  if(active&&!permanent)expiryTimer=setTimeout(()=>window.betConsultarAssinatura(auth.currentUser),Math.min(Math.max(0,expires-Date.now()),2147483647));
  }catch(e){
   if(request===subscriptionRequest){window.betResumeCapture?.(true);betAccessReset();el.textContent='Não foi possível consultar a assinatura. Verifique a conexão e tente novamente.';}
  }
