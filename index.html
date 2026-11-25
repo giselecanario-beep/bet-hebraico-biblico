@@ -668,7 +668,7 @@ document.getElementById("btn-recuperar")?.addEventListener("click", async () => 
  <span class="section-overline">HEBRAICO BÍBLICO · PRIMEIROS PASSOS</span>
  <h1 id="alphabet-title">O alfabeto hebraico</h1>
  <p class="section-intro">O hebraico tem 22 letras. <strong>Toque nas letras com o pequeno ícone de áudio</strong> para ouvir imediatamente. Os nomes das letras e os sons consonantais não são a mesma coisa.</p>
- <div class="panel alphabet-review" role="note"><strong>Revisão de pronúncia, letra por letra</strong><p>Começamos por <strong>Álef (א)</strong> e <strong>Bet (ב)</strong>. O Álef traz uma demonstração de seu som consonantal, a parada glotal; o Bet tem uma gravação humana do nome da letra, aprovada na avaliação. <span id="alphabet-review-summary">As outras 20 letras ainda aguardam revisão dos áudios.</span></p></div>
+ <div class="panel alphabet-review" role="note"><strong>Revisão de pronúncia, letra por letra</strong><p>Começamos por <strong>Álef (א)</strong> e <strong>Bet (ב)</strong>. O Álef traz uma demonstração de seu som consonantal, a parada glotal; o Bet tem uma gravação humana do nome da letra, aprovada na avaliação. <span id="alphabet-review-summary">Também há demonstrações fonéticas humanas para as letras restantes. A disponibilidade de gravações dos nomes é indicada em cada cartão.</span></p></div>
  <p class="small">Antes de começar: <button type="button" class="secondary" onclick="go('vogais')">Ver as vogais A, E, I, O, U</button></p>
  <div class="grid" id="letterGrid"></div>
  <div class="panel hidden" id="letterDetail" aria-live="polite"></div>
@@ -1104,6 +1104,18 @@ const reviewedAlphabetAudio=[
  {src:'./assets/audio/alef-parada-glotal-peter-isotalo.ogg',label:'Demonstração da parada glotal do Álef [ʔ]',credit:'Peter Isotalo',creditUrl:'https://commons.wikimedia.org/wiki/File:Glottal_stop.ogg',license:'CC BY-SA 3.0',explanation:'Nesta demonstração fonética, a parada glotal aparece antes e entre vogais a. Essas vogais servem apenas para tornar perceptível a interrupção do ar. <strong>O Álef não tem o som da vogal a.</strong> No hebraico israelense atual ele frequentemente não é ouvido como consoante.'},
  {src:'./assets/audio/bet-voz-humana-ijon.ogg',label:'Nome da letra Bet, em hebraico',credit:'Ijon',creditUrl:'https://commons.wikimedia.org/wiki/File:He-%D7%91%D6%B5%D6%BC%D7%99%D7%AA.ogg',license:'CC0 1.0',explanation:'Esta gravação reproduz o <strong>nome da letra Bet</strong>, na pronúncia israelense. O seu som consonantal, quando recebe dagesh (בּ), é b, como em bola; sem o ponto (ב), normalmente v na leitura moderna.'}
 ];
+/* Demonstrações fonéticas humanas externas, distintas dos nomes das letras.
+   Usadas apenas nas lacunas do acervo local; não são gravações de palavras hebraicas. */
+const alphabetPhoneticSamples=[[5,"Voiced_labio-dental_fricative.ogg","4/42","v","Nixinova","CC0 1.0","Som v da leitura israelense; historicamente a letra também representava w."],[11,"Alveolar_lateral_approximant.ogg","b/bc","l","Peter Isotalo","CC BY-SA 3.0","Som l, como em lua."],[12,"Bilabial_nasal.ogg","a/a9","m","Peter Isotalo","CC BY-SA 3.0","Som m, como em mão."],[13,"Alveolar_nasal.ogg","2/29","n","Peter Isotalo","CC BY-SA 3.0","Som n, como em navio."],[14,"Voiceless_alveolar_sibilant.ogg","a/ac","s","Peter Isotalo","CC BY-SA 3.0","Som s, como em sapo."],[15,"Voiced_pharyngeal_fricative.ogg","c/cd","ʕ","Peter Isotalo","CC BY-SA 3.0","Demonstração do valor faríngeo tradicional, preservado em algumas pronúncias. Muitos falantes israelenses atuais não realizam essa constrição."],[16,"Voiceless_bilabial_plosive.ogg","5/51","p","Peter Isotalo","CC BY-SA 3.0","A amostra corresponde a פּ, com dagesh; פ sem dagesh tem som f."],[17,"Voiceless_alveolar_sibilant_affricate.oga","9/9d","ts","Peter Isotalo","CC BY-SA 3.0","Som ts da leitura israelense, como t+s. Não é uma reconstrução do som enfático antigo."],[18,"Voiceless_velar_plosive.ogg","e/e3","k","Peter Isotalo","CC BY-SA 3.0","Som k moderno. O Qof histórico tinha articulação mais posterior."],[19,"Voiced_uvular_fricative.ogg","a/af","ʁ","Peter Isotalo","CC BY-SA 3.0","Demonstração de um r posterior comum na leitura israelense; existem outras realizações do Resh."],[20,"Voiceless_palato-alveolar_sibilant.ogg","c/cc","ʃ","Peter Isotalo","CC BY-SA 3.0","Som de שׁ, como ch em chuva. Com o ponto à esquerda, שׂ tem som s."],[21,"Voiceless_alveolar_plosive.ogg","0/02","t","Peter Isotalo","CC BY-SA 3.0","Som t moderno. A tradição tiberiense distinguia também a forma sem dagesh."]];
+for(const [index,file,hash,ipa,credit,license,note] of alphabetPhoneticSamples){
+ reviewedAlphabetAudio[index]={
+  src:'https://upload.wikimedia.org/wikipedia/commons/'+hash+'/'+file,
+  label:'Demonstração consonantal ['+ipa+'] de '+letters[index][1],
+  credit,creditUrl:'https://commons.wikimedia.org/wiki/File:'+file,license,
+  externalPhonetics:true,
+  explanation:'<strong>Demonstração do som consonantal ['+ipa+'].</strong> '+note+' A gravação ilustra o fonema, não o nome da letra em hebraico. As vogais de apoio, quando presentes, não fazem parte da consoante.'
+ };
+}
 const alphabetButtons=[];
 const alphabetAudioIcon='<span class="letter-sound-corner" aria-hidden="true">'+
  '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+
@@ -1129,7 +1141,7 @@ function showAlphabetLetter(index){
    ? '<p class="audio-source-note">'+audio.explanation+'</p>'+
      (index===0?alefTeachingNote:'')+
      '<p class="audio-status" id="alphabetAudioStatus" role="status" aria-live="polite"></p>'+
-     '<p class="alphabet-credit">Fonte da demonstração: <a href="'+audio.creditUrl+'" target="_blank" rel="noopener noreferrer">'+audio.credit+'</a> · '+audio.license+'. '+(index===0?'O som do Álef é uma demonstração fonética, não uma gravação histórica de hebraico.':'Referência de pronúncia israelense moderna.')+'</p>'
+     '<p class="alphabet-credit">Fonte da demonstração: <a href="'+audio.creditUrl+'" target="_blank" rel="noopener noreferrer">'+audio.credit+'</a> · '+'<a href="'+(audio.license==='CC0 1.0'?'https://creativecommons.org/publicdomain/zero/1.0/':'https://creativecommons.org/licenses/by-sa/3.0/')+'" target="_blank" rel="noopener noreferrer">'+audio.license+'</a>. '+(audio.externalPhonetics?'Amostra fonética externa, sem edição. Se não carregar, abra a fonte acima.':index===0?'O som do Álef é uma demonstração fonética, não uma gravação histórica de hebraico.':'Referência de pronúncia israelense moderna.')+'</p>'
    : '<p class="alphabet-audio-paused"><strong>Áudio em revisão.</strong> A gravação desta letra ainda não foi aprovada.</p>');
  if(audio)playBetRecording(audio.src,audio.label,'alphabetAudioStatus');
  else {++betRecordedRequest;if(betRecordedAudio){betRecordedAudio.pause();betRecordedAudio=null;}detail.scrollIntoView({behavior:'smooth',block:'nearest'});}
@@ -1166,7 +1178,7 @@ async function loadReviewedAlphabetAudio(){
    if((item.license||'').toUpperCase().replace(/[^A-Z0-9]/g,'')!=='CC0')continue;
    if(!/^https:\/\/commons\.wikimedia\.org\/wiki\//.test(item.commons_page||''))continue;
    const index=item.index;
-   if(reviewedAlphabetAudio[index])continue;
+   if(reviewedAlphabetAudio[index]&&!reviewedAlphabetAudio[index].externalPhonetics)continue;
    const name=letters[index][1];
    reviewedAlphabetAudio[index]={
     src:'./'+item.file,
@@ -1179,7 +1191,7 @@ async function loadReviewedAlphabetAudio(){
    const button=alphabetButtons[index];
    if(button){
     button.classList.add('letter-has-audio');
-    button.insertAdjacentHTML('afterbegin',alphabetAudioIcon);
+    if(!button.querySelector('.letter-sound-corner'))button.insertAdjacentHTML('afterbegin',alphabetAudioIcon);
     button.setAttribute('aria-label','Ouvir a pronúncia hebraica da letra '+name+' e ver a explicação');
    }
   }
@@ -1187,7 +1199,7 @@ async function loadReviewedAlphabetAudio(){
   const summary=document.getElementById('alphabet-review-summary');
   if(summary){
    summary.textContent=count===22
-    ?'As 22 letras têm gravações individuais disponíveis para escuta e avaliação.'
+    ?'As 22 letras têm recursos de escuta: gravações locais e demonstrações fonéticas externas, que ainda precisam de teste de reprodução. As amostras fonéticas não dizem o nome da letra.'
     :count+' das 22 letras têm gravações disponíveis; as demais ainda estão em revisão.';
   }
  }catch(e){
