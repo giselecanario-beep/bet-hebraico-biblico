@@ -1,0 +1,78 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId}/learning/intro {
+      allow get: if request.auth != null
+        && request.auth.uid == userId;
+      allow create, update: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly(['completed', 'updatedAt'])
+        && request.resource.data.completed is list
+        && request.resource.data.completed.size() <= 100
+        && request.resource.data.updatedAt is timestamp;
+    }
+
+    // Retomada: metadados de estudo privados do próprio estudante.
+    match /users/{userId}/learning/resume {
+      allow get: if request.auth != null
+        && request.auth.uid == userId;
+      allow create, update: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasAll(['lessonId', 'anchor', 'offset', 'solved', 'paidCompleted', 'clientTime', 'updatedAt'])
+        && request.resource.data.keys().hasOnly(['lessonId', 'anchor', 'offset', 'solved', 'paidCompleted', 'clientTime', 'updatedAt'])
+        && request.resource.data.lessonId is string
+        && request.resource.data.lessonId.matches('^[0-9]{2,6} {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/betEntitlements/$(request.auth.uid))
+        && get(/databases/$(database)/documents/betEntitlements/$(request.auth.uid)).data.active == true
+        && (
+          get(/databases/$(database)/documents/betEntitlements/$(request.auth.uid)).data.get('role', '') == 'owner'
+          || get(/databases/$(database)/documents/betEntitlements/$(request.auth.uid)).data.validUntil > request.time
+        );
+    }
+    match /betEntitlements/{uid} {
+      allow get: if request.auth != null && request.auth.uid == uid;
+      allow list, create, update, delete: if false;
+    }
+    match /betPaidLessons/{lessonId} {
+      allow get: if betHasActiveAccess();
+      allow list, create, update, delete: if false;
+    }
+    
+  }
+}
+)
+        && request.resource.data.anchor is string
+        && request.resource.data.anchor.size() <= 120
+        && request.resource.data.offset is int
+        && request.resource.data.offset >= 0
+        && request.resource.data.offset <= 1000
+        && request.resource.data.solved is list
+        && request.resource.data.solved.size() <= 100
+        && request.resource.data.paidCompleted is list
+        && request.resource.data.paidCompleted.size() <= 100
+        && request.resource.data.clientTime is int
+        && request.resource.data.clientTime >= 0
+        && request.resource.data.updatedAt == request.time;
+    }
+
+    function betHasActiveAccess() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/betEntitlements/$(request.auth.uid))
+        && get(/databases/$(database)/documents/betEntitlements/$(request.auth.uid)).data.active == true
+        && (
+          get(/databases/$(database)/documents/betEntitlements/$(request.auth.uid)).data.get('role', '') == 'owner'
+          || get(/databases/$(database)/documents/betEntitlements/$(request.auth.uid)).data.validUntil > request.time
+        );
+    }
+    match /betEntitlements/{uid} {
+      allow get: if request.auth != null && request.auth.uid == uid;
+      allow list, create, update, delete: if false;
+    }
+    match /betPaidLessons/{lessonId} {
+      allow get: if betHasActiveAccess();
+      allow list, create, update, delete: if false;
+    }
+    
+  }
+}
