@@ -465,6 +465,7 @@ main{max-width:1020px;padding:28px 20px 72px}
 #bet-checkout-button[hidden]{display:none!important}
 .bet-tutor-disclosure,.bet-extra{margin:20px 0;border:1px solid var(--line);border-radius:10px;background:#fffaf4}.bet-tutor-disclosure>summary,.bet-extra>summary{cursor:pointer;padding:14px 16px;color:var(--wine);min-height:44px;font:600 15px/1.5 Arial,sans-serif}.bet-tutor-disclosure>summary span{display:block;font-size:13px;font-weight:400;color:var(--muted);padding:3px 0 0 17px}.bet-tutor-disclosure .tutor-panel{margin:0;border:0;border-top:1px solid var(--line);border-radius:0 0 10px 10px}.bet-extra>p,.bet-extra>ul{margin:0 16px 14px}.audio-status:empty{display:none}.audio-status:not(:empty){padding:9px 12px;background:#f7f1e7;border-radius:6px}.audio-play{min-height:44px}.audio-item{min-width:0}.audio-caption{overflow-wrap:anywhere}.bet-extra a{color:var(--wine)}.bet-tutor-disclosure summary:focus-visible,.bet-extra summary:focus-visible{outline:2px solid var(--wine);outline-offset:2px}@media(max-width:560px){.audio-item{padding:12px 7px;gap:6px}.audio-items{gap:8px}.audio-practice .audio-hebrew{font-size:clamp(27px,7.3vw,38px);overflow-wrap:anywhere}.audio-play{width:100%;white-space:normal}}
 .bet-review-actions{display:flex;flex-wrap:wrap;gap:8px}.bet-review-actions button{flex:1;min-height:44px}.bet-notebook-word{display:flex;align-items:center;gap:16px;padding:12px 16px;border-top:1px solid var(--line)}.bet-notebook-word>bdi{font:32px/1.6 'Times New Roman',serif;color:var(--wine);min-width:82px}.bet-notebook-word details{flex:1}.bet-notebook-word summary{cursor:pointer;color:var(--wine);font:14px/1.5 Arial,sans-serif}.bet-notebook-word p{font-size:16px}.account-details label{display:block;font:600 14px/1.5 Arial,sans-serif;margin:10px 0 4px}#betReviewReveal{display:block;margin-top:12px}#betReviewReveal.hidden{display:none}
+button:focus-visible,a:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--wine);outline-offset:3px}#betReviewGlyph{font-size:clamp(48px,13vw,90px);overflow-wrap:anywhere}#betReviewIncludePaid{max-width:100%;white-space:normal}.practice-modes{grid-template-columns:repeat(auto-fit,minmax(125px,1fr))}@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation-duration:0.01ms!important;transition-duration:0.01ms!important}}
 </style>
   
 </head>
@@ -548,6 +549,7 @@ function betAccessReset(){
  window.betAccess={uid:null,active:false,owner:false,collaborator:false,expires:0,checked:false};
  betUpdateCheckout();
  window.betClearPaidView?.();
+ window.betReviewClearPaid?.();
  window.betRenderPaidCatalog?.();
 }
 window.betConsultarAssinatura=async(user)=>{
@@ -589,6 +591,17 @@ window.betFetchPaidLesson=async(id)=>{
  if(request!==paidReadRequest||auth.currentUser?.uid!==user.uid||!window.betAccess?.active||window.betAccess.expires<=Date.now())throw new Error('changed');
  if(!snap.exists())throw new Error('missing');
  return snap.data();
+};
+window.betFetchReviewVocabulary=async(ids)=>{
+ const user=auth.currentUser,uid=user?.uid,access=window.betAccess;
+ if(!uid||!access?.active||access.uid!==uid||access.expires<=Date.now())return [];
+ const allowed=[...new Set(ids)].filter(id=>/^(06|07|08|09|10)$/.test(id));
+ const results=await Promise.all(allowed.map(async id=>{
+  const snap=await getDocFromServer(doc(db,'betPaidLessons',id));
+  return snap.exists()?{id,sounds:snap.data().sounds}:null;
+ }));
+ if(auth.currentUser?.uid!==uid||window.betAccess?.uid!==uid||!window.betAccess?.active||window.betAccess.expires<=Date.now())throw Error('access changed');
+ return results.filter(Boolean);
 };
 window.betCancelPaidRead=()=>{++paidReadRequest;};
 window.addEventListener('pagehide',()=>{window.betResumeCapture?.(true);betAccessReset();});
@@ -864,7 +877,7 @@ document.getElementById("btn-recuperar")?.addEventListener("click", async () => 
 </section>
 <section id="betReviewPractice" class="panel hidden" aria-labelledby="betReviewTitle">
 <h2 id="betReviewTitle">Revisão de palavras</h2><p>Leia uma palavra por vez. Tente lembrar o significado antes de revelar a resposta.</p>
-<p id="betReviewCount" class="small" role="status"></p>
+<p id="betReviewCount" class="small" role="status"></p><div id="betReviewPaidHint" class="hidden"><button type="button" class="secondary" id="betReviewIncludePaid" onclick="betReviewIncludePaid()">Incluir palavras das aulas exclusivas</button><p id="betReviewPaidStatus" class="small" role="status"></p></div>
 <div id="betReviewCard"><div id="betReviewGlyph" class="big-hebrew" lang="he" dir="rtl"></div>
 <button type="button" class="secondary" onclick="betReviewListen()">Ouvir palavra</button>
 <p id="betReviewAudioStatus" class="audio-status" role="status"></p>
@@ -872,7 +885,7 @@ document.getElementById("btn-recuperar")?.addEventListener("click", async () => 
 <div id="betReviewAnswer" class="hidden"><h3 id="betReviewMeaning"></h3><p id="betReviewTranslit"></p><p class="small">Como foi para você?</p><div class="bet-review-actions"><button type="button" class="secondary" onclick="betReviewRate(false)">Preciso praticar</button><button type="button" class="primary" onclick="betReviewRate(true)">Lembrei</button></div></div></div>
 <div id="betReviewEnd" class="hidden"><p id="betReviewEndText"></p><button type="button" class="secondary" onclick="betReviewStart(true)">Revisar novamente</button></div>
 <details class="bet-extra"><summary>Meu caderno de palavras</summary><div id="betReviewNotebook"></div></details>
-<p class="small">A revisão é opcional, sem nota ou cronômetro. Os intervalos são registrados neste aparelho, separados por conta.</p>
+<p class="small">A revisão é opcional, sem nota ou cronômetro. Palavras que apresentaram dificuldade aparecem primeiro. Os intervalos são registrados neste aparelho, separados por conta.</p>
 </section>
 </section>
 <section id="trilhas" class="page hidden"><h1>Sua jornada no hebraico bíblico</h1><p class="section-intro">Do primeiro Alef à leitura e análise de textos bíblicos. Comece gratuitamente e avance no seu ritmo.</p><div class="tracks">
@@ -1167,7 +1180,9 @@ const betReviewWords=[
  {h:'שָׁלוֹם',t:'shalom',m:'paz, bem-estar',lesson:3},{h:'זֶה',t:'zeh',m:'este / isto',lesson:4},{h:'חַי',t:'chai',m:'vivo',lesson:4}
 ];
 const betReviewKey=()=> 'bet-vocab-review-v1-'+(window.betUsuarioId||'guest');
-let betReviewSession=null;
+let betReviewSession=null,betReviewPaid=[],betReviewGeneration=0;
+const betReviewWordKey=w=>w.id||w.h;
+const betReviewHasAccess=()=>!!(window.betUsuarioId&&window.betAccess?.uid===window.betUsuarioId&&window.betAccess.active&&window.betAccess.expires>Date.now());
 function betReviewLoad(){
  try{const data=JSON.parse(localStorage.getItem(betReviewKey())||'{}');return data&&typeof data==='object'&&!Array.isArray(data)?data:{};}catch(e){return {};}
 }
@@ -1177,7 +1192,9 @@ function betReviewSchedule(prior,remembered,now){
  return {stage,due:now+(remembered?intervals[stage-1]*86400000:600000)};
 }
 function betReviewAvailable(){
- return betReviewWords.filter(w=>completed.includes(w.lesson));
+ const free=betReviewWords.filter(w=>completed.includes(w.lesson));
+ const paid=betReviewHasAccess()?betReviewPaid:[];
+ const seen=new Set(free.map(w=>w.h));return [...free,...paid.filter(w=>{if(seen.has(w.h))return false;seen.add(w.h);return true;})];
 }
 function betReviewNotebook(){
  const el=document.getElementById('betReviewNotebook');if(!el)return;
@@ -1190,30 +1207,79 @@ function betReviewNotebook(){
   row.append(h,detail);el.append(row);
  }
 }
-function betReviewStart(all=false){
- const scope=betReviewKey(),state=betReviewLoad(),available=betReviewAvailable(),now=Date.now();
- const due=available.filter(w=>all||!Number.isFinite(state[w.h]?.due)||state[w.h].due<=now);
- betReviewSession={scope,items:due.slice(0,6),index:0,revealed:false};
+function betReviewDue(available,state,now,all=false){
+ return available.filter(w=>all||!Number.isFinite(state[betReviewWordKey(w)]?.due)||state[betReviewWordKey(w)].due<=now).sort((a,b)=>{
+ const x=state[betReviewWordKey(a)]||{},y=state[betReviewWordKey(b)]||{};
+ return (Number(y.mistakes)||0)-(Number(x.mistakes)||0)||(Number(x.due)||0)-(Number(y.due)||0);
+ });
+}
+function betReviewBuild(all=false){
+ const scope=betReviewKey(),state=betReviewLoad(),available=betReviewAvailable();
+ betReviewSession={scope,items:betReviewDue(available,state,Date.now(),all).slice(0,6),index:0,revealed:false};
  betReviewNotebook();betReviewShow();
+}
+function betReviewStart(all=false){
+ ++betReviewGeneration;betReviewPaid=[];betReviewBuild(all);
+ const hint=document.getElementById('betReviewPaidHint'),button=document.getElementById('betReviewIncludePaid');
+ const can=betReviewHasAccess()&&betPaidCompleted().length>0;
+ hint.classList.toggle('hidden',!can);button.disabled=false;
+ document.getElementById('betReviewPaidStatus').textContent='';
+}
+function betReviewExtractPaid(results){
+ const words=[];
+ for(const lesson of results){
+  if(!Array.isArray(lesson.sounds))continue;
+  lesson.sounds.forEach((item,n)=>{
+   if(typeof item?.spoken!=='string'||typeof item?.label!=='string'||item.spoken.length>100||item.label.length>160||alphabetSpokenNames.includes(item.spoken)||item.label.startsWith('Leitura bíblica'))return;
+   const [t,...rest]=item.label.split(' · ');const m=rest.join(' · ');if(!m)return;
+   words.push({id:'p:'+lesson.id+':'+n,h:item.spoken,t,m,lesson:Number(lesson.id)-1,paid:true});
+  });
+ }
+ return words;
+}
+async function betReviewIncludePaid(){
+ if(!betReviewHasAccess()||!window.betFetchReviewVocabulary)return;
+ const generation=++betReviewGeneration,scope=betReviewKey(),button=document.getElementById('betReviewIncludePaid'),status=document.getElementById('betReviewPaidStatus');
+ button.disabled=true;status.textContent='Consultando o vocabulário das aulas concluídas…';
+ try{
+  const results=await window.betFetchReviewVocabulary(betPaidCompleted());
+  if(generation!==betReviewGeneration||scope!==betReviewKey()||!betReviewHasAccess())return;
+  betReviewPaid=betReviewExtractPaid(results);betReviewBuild(false);
+  status.textContent=betReviewPaid.length?'Vocabulário exclusivo incluído na revisão.':'Nenhuma palavra exclusiva disponível.';
+ }catch(e){if(generation===betReviewGeneration)status.textContent='Não foi possível carregar o vocabulário exclusivo. Tente novamente.';}
+ finally{if(generation===betReviewGeneration)button.disabled=false;}
+}
+window.betReviewClearPaid=()=>{
+ ++betReviewGeneration;betReviewPaid=[];
+ const panel=document.getElementById('betReviewPractice');
+ if(panel&&!panel.classList.contains('hidden')&&betReviewSession){stopHebrewAudio();betReviewBuild(false);}
+ document.getElementById('betReviewPaidHint')?.classList.add('hidden');
+};
+function betReviewMarkDifficulty(h){
+ if(!betReviewWords.some(w=>w.h===h))return;
+ const state=betReviewLoad(),prior=state[h]||{};
+ state[h]={stage:0,due:Date.now(),mistakes:Math.min(20,(Number(prior.mistakes)||0)+1)};
+ try{localStorage.setItem(betReviewKey(),JSON.stringify(state));}catch(e){}
 }
 function betReviewShow(){
  const s=betReviewSession;if(!s)return;
  const w=s.items[s.index],card=document.getElementById('betReviewCard'),end=document.getElementById('betReviewEnd');
+ if(w?.paid&&!betReviewHasAccess()){window.betReviewClearPaid();return;}
  card.classList.toggle('hidden',!w);end.classList.toggle('hidden',!!w);
  document.getElementById('betReviewCount').textContent=w?'Palavra '+(s.index+1)+' de '+s.items.length:'';
  if(!w){document.getElementById('betReviewEndText').textContent=s.items.length?'Revisão concluída. Volte em outro momento para relembrar suas palavras.':betReviewAvailable().length?'Nenhuma palavra prevista para revisão agora. Se quiser, pratique novamente.':'Conclua sua primeira aula para começar o caderno.';end.querySelector('button').classList.toggle('hidden',!betReviewAvailable().length);return;}
  s.revealed=false;document.getElementById('betReviewGlyph').textContent=w.h;document.getElementById('betReviewAnswer').classList.add('hidden');document.getElementById('betReviewReveal').classList.remove('hidden');document.getElementById('betReviewAudioStatus').textContent='';
 }
 function betReviewListen(){
- const s=betReviewSession,w=s?.items[s.index];if(w&&s.scope===betReviewKey())betPlayWord(w.h,'a palavra da revisão','betReviewAudioStatus');
+ const s=betReviewSession,w=s?.items[s.index];if(w&&s.scope===betReviewKey()&&(!w.paid||betReviewHasAccess()))betPlayWord(w.h,'a palavra da revisão','betReviewAudioStatus');
 }
 function betReviewReveal(){
- const s=betReviewSession,w=s?.items[s.index];if(!w||s.scope!==betReviewKey())return;
+ const s=betReviewSession,w=s?.items[s.index];if(!w||s.scope!==betReviewKey()||(w.paid&&!betReviewHasAccess()))return;
  s.revealed=true;document.getElementById('betReviewMeaning').textContent=w.m;document.getElementById('betReviewTranslit').textContent=w.t;document.getElementById('betReviewAnswer').classList.remove('hidden');document.getElementById('betReviewReveal').classList.add('hidden');
 }
 function betReviewRate(remembered){
- const s=betReviewSession,w=s?.items[s.index];if(!w||!s.revealed||s.scope!==betReviewKey())return;
- s.revealed=false;const state=betReviewLoad();state[w.h]=betReviewSchedule(state[w.h],remembered,Date.now());
+ const s=betReviewSession,w=s?.items[s.index];if(!w||!s.revealed||s.scope!==betReviewKey()||(w.paid&&!betReviewHasAccess()))return;
+ s.revealed=false;const state=betReviewLoad(),key=betReviewWordKey(w),old=state[key]||{};state[key]={...betReviewSchedule(old,remembered,Date.now()),mistakes:remembered?Math.max(0,(Number(old.mistakes)||0)-1):Math.min(20,(Number(old.mistakes)||0)+1)};
  try{localStorage.setItem(s.scope,JSON.stringify(state));}catch(e){}
  stopHebrewAudio();s.index++;betReviewShow();
 }
@@ -1276,7 +1342,7 @@ function answerVowelIntro(button){
  }
 }
 
-function go(page){window.betResumeCapture?.(true);if(page!=='aulas')window.betResumeDetach?.();if(page!=='aulas')window.betClearPaidView?.();document.querySelectorAll('.page').forEach(x=>x.classList.toggle('hidden',x.id!==page));document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('active',x.dataset.page===page));window.scrollTo({top:0,behavior:'smooth'});if(page==='exercicios'){if(!quiz.length)startQuiz();if(!listeningOrder.length)startListeningQuiz();}}
+function go(page){stopHebrewAudio();if(page!=='exercicios'&&betReviewPaid.length)window.betReviewClearPaid?.();window.betResumeCapture?.(true);if(page!=='aulas')window.betResumeDetach?.();if(page!=='aulas')window.betClearPaidView?.();document.querySelectorAll('.page').forEach(x=>x.classList.toggle('hidden',x.id!==page));document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('active',x.dataset.page===page));window.scrollTo({top:0,behavior:'smooth'});if(page==='exercicios'){if(!quiz.length)startQuiz();if(!listeningOrder.length)startListeningQuiz();}}
   
 function chaveProgresso() {
   return window.betUsuarioId
@@ -2086,7 +2152,7 @@ async function betResumeOpen(){
  }
 }
 window.betResumeBeforeAccountChange=()=>{
- if(betReviewSession){betReviewSession=null;document.getElementById('betReviewPractice')?.classList.add('hidden');document.getElementById('chooseReview')?.setAttribute('aria-pressed','false');document.getElementById('letterPractice')?.classList.remove('hidden');document.getElementById('chooseLetters')?.setAttribute('aria-pressed','true');}
+ ++betReviewGeneration;betReviewPaid=[];if(betReviewSession){betReviewSession=null;document.getElementById('betReviewPractice')?.classList.add('hidden');document.getElementById('chooseReview')?.setAttribute('aria-pressed','false');document.getElementById('letterPractice')?.classList.remove('hidden');document.getElementById('chooseLetters')?.setAttribute('aria-pressed','true');}
  window.betResumeCapture?.(true);window.betResumeDetach?.();
  clearTimeout(betResumeWriteTimer);betResumeWriteTimer=null;
  const free=document.getElementById('lessonView');if(free){free.classList.add('hidden');free.innerHTML='';}
@@ -2206,6 +2272,7 @@ function answerListeningWord(selectedIndex,button){
   const correctIndex=listeningOrder[listeningIndex];
   const feedback=document.getElementById('listeningFeedback');
   if(selectedIndex!==correctIndex){
+    if(!listeningWrongAttempt)betReviewMarkDifficulty(listeningWords[correctIndex].hebrew);
     listeningWrongAttempt=true;
     button.classList.add('wrong');
     feedback.textContent='Ainda não! Escute mais uma vez e tente outra alternativa.';
