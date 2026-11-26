@@ -1,6 +1,8 @@
 # BET — preparação comercial (rascunho interno, não publicar como contrato)
 
 ## Critérios de lançamento
+- Diretriz confirmada em 26/11: manter as cinco primeiras aulas gratuitas permanentemente, sem exigir cartão, e direcionar o marketing de aquisição para elas. Da aula 06 em diante, exigir autorização de acesso ao BET Completo. O período experimental de sete dias da assinatura, previamente previsto, precisa ser reconfirmado antes de configurar o checkout comercial.
+- Antes de abrir vendas, implementar integração autenticada no servidor, com vínculo inequívoco entre UID e assinatura, confirmação pelo provedor, renovação, cancelamento autônomo, comprovante e tratamento de reembolsos. Testar sem cobranças reais primeiro. Não habilitar faturamento de infraestrutura sem aprovação da titular.
 - Oferta inicial: cinco aulas gratuitas e BET Completo com cinco aulas exclusivas disponíveis; futuras aulas incluídas enquanto vigente. R$ 19,90/mês após sete dias de teste gratuito, conforme plano confirmado pela titular. Não prometer número de futuras aulas ou frequência ainda não definida.
 - Confirmar identificação legal do fornecedor (nome empresarial/nome, CPF/CNPJ conforme aplicável, endereço físico e eletrônico), canal de atendimento, condições de ativação, cancelamento, reembolso, emissão fiscal e prazo de suporte. Não publicar dados pessoais no repositório. Revisar com profissional jurídico/contábil.
 - Definir prazo de ativação manual e garantir que o período de experiência não seja consumido por atraso na liberação. Não abrir vendas até decidir entre integração automática validada e operação manual com atendimento efetivo. O link de checkout está preparado, mas desativado.
