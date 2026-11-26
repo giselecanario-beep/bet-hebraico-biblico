@@ -467,6 +467,17 @@ main{max-width:1020px;padding:28px 20px 72px}
 .bet-review-actions{display:flex;flex-wrap:wrap;gap:8px}.bet-review-actions button{flex:1;min-height:44px}.bet-notebook-word{display:flex;align-items:center;gap:16px;padding:12px 16px;border-top:1px solid var(--line)}.bet-notebook-word>bdi{font:32px/1.6 'Times New Roman',serif;color:var(--wine);min-width:82px}.bet-notebook-word details{flex:1}.bet-notebook-word summary{cursor:pointer;color:var(--wine);font:14px/1.5 Arial,sans-serif}.bet-notebook-word p{font-size:16px}.account-details label{display:block;font:600 14px/1.5 Arial,sans-serif;margin:10px 0 4px}#betReviewReveal{display:block;margin-top:12px}#betReviewReveal.hidden{display:none}
 button:focus-visible,a:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--wine);outline-offset:3px}#betReviewGlyph{font-size:clamp(48px,13vw,90px);overflow-wrap:anywhere}#betReviewIncludePaid{max-width:100%;white-space:normal}.practice-modes{grid-template-columns:repeat(auto-fit,minmax(125px,1fr))}@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation-duration:0.01ms!important;transition-duration:0.01ms!important}}
 #usuario-conectado span{min-width:0;overflow-wrap:anywhere}#usuario-conectado button{min-width:64px;margin:0}
+/* Área do aluno BET */
+.bet-profile-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:20px}
+.bet-profile-grid .panel{margin:0;min-width:0}
+.bet-profile-grid h2{font-size:24px;margin:0 0 12px}
+.bet-profile-grid p{overflow-wrap:anywhere}
+.bet-profile-grid button{min-height:44px;white-space:normal;margin:6px 4px 4px 0}
+.bet-profile-grid button:disabled{opacity:.65;cursor:not-allowed}
+.bet-profile-full{grid-column:1/-1}
+.bet-profile-status{font-weight:bold;color:var(--wine)}
+.bet-profile-cancel{border:1px solid var(--wine);background:transparent;color:var(--wine);padding:12px 16px;border-radius:8px}
+@media(max-width:640px){.bet-profile-grid{grid-template-columns:1fr}}
 </style>
   
 </head>
@@ -526,7 +537,40 @@ const BET_CHECKOUT_URL='https://mpago.la/1D3vZWm';
 function betCheckoutCanOpen(enabled,uid,access){
  return enabled===true&&typeof uid==='string'&&uid.length>0&&access?.uid===uid&&access.checked===true&&access.active===false&&access.owner!==true&&access.collaborator!==true;
 }
+function betProfileAccessLabel(user,access,now){
+ if(!user)return {label:'Visitante',detail:'Entre na sua conta para consultar seu acesso.'};
+ if(!access?.checked||access.uid!==user.uid)return {label:'Acesso ainda não confirmado',detail:'Atualize o status para consultar suas permissões.'};
+ if(access.active&&access.expires>now){
+  if(access.owner)return {label:'Proprietária',detail:'Acesso permanente.'};
+  if(access.collaborator)return {label:'Colaborador',detail:'Acesso permanente.'};
+  return {label:'Acesso exclusivo ativo',detail:Number.isFinite(access.expires)?'Autorização até '+new Date(access.expires).toLocaleDateString('pt-BR')+'.':'Autorização ativa.'};
+ }
+ return {label:'Plano gratuito',detail:'Acesso às cinco aulas introdutórias. Sem cobrança nesta versão.'};
+}
+let betProfileUid=null;
+function betRenderProfile(){
+ const user=auth.currentUser,uid=user?.uid||null,access=window.betAccess;
+ const email=document.getElementById('bet-profile-email');if(!email)return;
+ if(betProfileUid!==uid){document.getElementById('bet-profile-message').textContent='';betProfileUid=uid;}
+ email.textContent=user?'E-mail: '+(user.email||'Conta BET'):'Você ainda não entrou na sua conta.';
+ for(const id of ['bet-profile-reset','bet-profile-exit','bet-profile-refresh']){const el=document.getElementById(id);if(el)el.hidden=!user;}
+ document.getElementById('bet-profile-login').hidden=!!user;
+ const info=betProfileAccessLabel(user,access,Date.now());
+ document.getElementById('bet-profile-plan').textContent=info.label;
+ document.getElementById('bet-profile-validity').textContent=info.detail;
+}
+window.betRenderProfile=betRenderProfile;
+document.getElementById('bet-profile-reset')?.addEventListener('click',async()=>{
+ const user=auth.currentUser,button=document.getElementById('bet-profile-reset'),msg=document.getElementById('bet-profile-message');
+ if(!user?.email)return;button.disabled=true;
+ try{await sendPasswordResetEmail(auth,user.email);if(auth.currentUser?.uid===user.uid)msg.textContent='E-mail para alterar a senha enviado. Confira sua caixa de entrada e o spam.';}
+ catch(e){if(auth.currentUser?.uid===user.uid)msg.textContent='Não foi possível enviar o e-mail. Tente novamente.';}
+ finally{button.disabled=false;}
+});
+document.getElementById('bet-profile-exit')?.addEventListener('click',()=>document.getElementById('btn-sair')?.click());
+
 function betUpdateCheckout(){
+ betRenderProfile();
  const button=document.getElementById('bet-checkout-button'),note=document.getElementById('bet-checkout-note');
  if(!button||!note)return;
  const user=auth.currentUser,access=window.betAccess;
@@ -677,6 +721,7 @@ if (user) {
     statusBar.innerHTML = "";
     if (areaLogin) areaLogin.style.display = "flex";
   }
+  betRenderProfile();
 });
     
 document.getElementById("btn-criar")?.addEventListener("click", async () => {
@@ -736,10 +781,10 @@ document.getElementById("btn-recuperar")?.addEventListener("click", async () => 
   <div class="brand-monogram" lang="he" aria-hidden="true">ב</div>
   <div class="brand-lockup"><div class="brand">BET</div><div class="sub">HEBRAICO BÍBLICO</div></div>
   <span class="brand-tagline">A língua dos textos bíblicos, passo a passo.</span>
-  <button type="button" class="header-account" onclick="showAccountPanel()">Minha conta</button>
+  <button type="button" class="header-account" onclick="go('perfil')">Meu perfil</button>
  </div>
 </header>
-<nav aria-label="Navegação"><button data-page="inicio" class="active">Início</button><button data-page="vogais">Vogais</button><button data-page="alfabeto">Alfabeto</button><button data-page="aulas">Aulas</button><button data-page="exercicios">Exercícios</button><button data-page="trilhas">Trilhas</button><button data-page="laboratorio">Laboratório</button><button data-page="testes">Avaliar teste</button></nav>
+<nav aria-label="Navegação"><button data-page="inicio" class="active">Início</button><button data-page="vogais">Vogais</button><button data-page="alfabeto">Alfabeto</button><button data-page="aulas">Aulas</button><button data-page="exercicios">Exercícios</button><button data-page="trilhas">Trilhas</button><button data-page="laboratorio">Laboratório</button><button data-page="testes">Avaliar teste</button><button data-page="perfil">Meu perfil</button></nav>
 <main>
 <section id="inicio" class="page">
  <div class="hero" aria-labelledby="hero-title">
@@ -791,7 +836,7 @@ document.getElementById("btn-recuperar")?.addEventListener("click", async () => 
       <div class="vowel-audio-group"><button type="button" class="vowel-card vowel-card-audio" onclick="playVowelName(3)" aria-label="Ouvir o nome Ḥolam em hebraico."><span class="vowel-latin">O</span><span class="vowel-hebrew" lang="he" dir="rtl">אֹ</span><strong>Ḥolam</strong><span lang="he" dir="rtl" class="vowel-name-hebrew">חוֹלָם</span><span class="vowel-description">Um pontinho acima da letra.</span><span class="vowel-callout"><span aria-hidden="true">🔊 </span>Ouvir Ḥolam</span></button><button type="button" class="vowel-sound-only" onclick="playVowelSound(3)" aria-label="Ouvir somente o som de O">🔊 Som de o</button></div>
       <div class="vowel-audio-group"><button type="button" class="vowel-card vowel-card-audio" onclick="playVowelName(4)" aria-label="Ouvir o nome Qibbuts em hebraico."><span class="vowel-latin">U</span><span class="vowel-hebrew" lang="he" dir="rtl">אֻ</span><strong>Qibbuts</strong><span lang="he" dir="rtl" class="vowel-name-hebrew">קֻבּוּץ</span><span class="vowel-description">Três pontinhos inclinados abaixo da letra.</span><span class="vowel-callout"><span aria-hidden="true">🔊 </span>Ouvir Qibbuts</span></button><button type="button" class="vowel-sound-only" onclick="playVowelSound(4)" aria-label="Ouvir somente o som de U">🔊 Som de u</button></div>
     </div>
-    <p id="vowelAudioStatus" class="audio-status vowel-audio-status" role="status" aria-live="polite">Toque no cartão para ouvir o nome em hebraico ou no botão inferior para ouvir o som. Os nomes usam uma voz hebraica do aparelho, quando disponível.</p>
+    <p id="vowelAudioStatus" class="audio-status vowel-audio-status" role="status" aria-live="polite">Toque no cartão para ouvir o nome em hebraico ou no botão inferior para ouvir o som. Os nomes usam gravações da professora do BET.</p>
   </section>
   <div class="panel vowel-more">
     <h2>Mas por que há outros sinais?</h2>
@@ -914,6 +959,40 @@ document.getElementById("btn-recuperar")?.addEventListener("click", async () => 
 <div class="track locked"><span class="tag">Trilha 5 · Em preparação</span><h3>Ler a Bíblia em hebraico</h3><p>Narrativas, poesia e textos proféticos.</p><button class="secondary" disabled>Em preparação</button></div>
 <div class="track locked"><span class="tag">Trilha 6 · Em preparação</span><h3>Analisar textos bíblicos</h3><p>Morfologia, sintaxe, tradução e contexto literário.</p><button class="secondary" disabled>Em preparação</button></div></div><p class="small">As trilhas avançadas ainda não estão disponíveis. Nenhuma cobrança é realizada nesta versão.</p></section>
 <section id="laboratorio" class="page hidden"><h1>Laboratório de leitura</h1><p>Conheça as primeiras palavras com atenção à escrita e ao significado.</p><div class="panel"><div class="lab-word" lang="he" dir="rtl">אָב</div><h2>Av · pai</h2><p>Esta palavra é formada por Alef (א) e Bet (ב). O hebraico é lido da direita para a esquerda.</p><p class="small">Este é um laboratório introdutório. A análise morfológica e os textos bíblicos completos serão desenvolvidos nas próximas versões.</p><button class="primary" onclick="go('alfabeto')">Explorar as letras</button></div></section>
+<section id="perfil" class="page hidden" aria-labelledby="bet-profile-title">
+ <span class="section-overline">ÁREA DO ALUNO</span>
+ <h1 id="bet-profile-title">Meu perfil</h1>
+ <p class="section-intro">Acompanhe seus estudos e gerencie sua conta BET em um só lugar.</p>
+ <div class="bet-profile-grid">
+  <section class="panel bet-profile-full" aria-labelledby="bet-profile-account-title">
+   <h2 id="bet-profile-account-title">Minha conta</h2>
+   <p id="bet-profile-email" role="status">Verificando sua conta…</p>
+   <button id="bet-profile-login" type="button" class="primary" onclick="showAccountPanel()">Entrar ou criar conta</button>
+   <button id="bet-profile-reset" type="button" class="secondary" hidden>Alterar senha por e-mail</button>
+   <button id="bet-profile-exit" type="button" class="secondary" hidden>Sair da conta</button>
+   <p id="bet-profile-message" class="small" role="status" aria-live="polite"></p>
+  </section>
+  <section class="panel" aria-labelledby="bet-profile-learning-title">
+   <h2 id="bet-profile-learning-title">Meu aprendizado</h2>
+   <p id="bet-profile-progress" class="bet-profile-status" aria-live="polite">Consultando progresso…</p>
+   <p class="small">Seu percurso nas cinco aulas introdutórias.</p>
+   <button type="button" class="secondary" onclick="go('aulas')">Ver minhas aulas</button>
+  </section>
+  <section class="panel" aria-labelledby="bet-profile-subscription-title">
+   <h2 id="bet-profile-subscription-title">Minha assinatura</h2>
+   <p id="bet-profile-plan" class="bet-profile-status" role="status">Consultando acesso…</p>
+   <p id="bet-profile-validity" class="small"></p>
+   <button type="button" id="bet-profile-refresh" class="secondary" onclick="window.betAtualizarAssinatura?.()" hidden>Atualizar status</button>
+   <p class="small">As vendas ainda não estão abertas nesta versão beta.</p>
+  </section>
+  <section class="panel bet-profile-full" aria-labelledby="bet-profile-billing-title">
+   <h2 id="bet-profile-billing-title">Pagamentos e cancelamento</h2>
+   <p>O histórico de pagamentos e o cancelamento direto pelo BET estão em preparação. Nenhuma assinatura comercial é vendida nesta versão.</p>
+   <button type="button" class="bet-profile-cancel" disabled>Cancelar assinatura (em preparação)</button>
+   <p class="small">Antes da abertura das vendas, o cancelamento deverá interromper a renovação no provedor e emitir uma confirmação. Cancelar a assinatura não excluirá a conta nem o progresso.</p>
+  </section>
+ </div>
+</section>
 </main>
 <aside class="account-wrap" aria-label="Conta opcional">
  <details id="contaBet" class="account-details">
@@ -1362,7 +1441,7 @@ function answerVowelIntro(button){
  }
 }
 
-function go(page){stopHebrewAudio();if(page!=='exercicios'&&betReviewSession)window.betReviewClearPaid?.();window.betResumeCapture?.(true);if(page!=='aulas')window.betResumeDetach?.();if(page!=='aulas')window.betClearPaidView?.();document.querySelectorAll('.page').forEach(x=>x.classList.toggle('hidden',x.id!==page));document.querySelectorAll('nav button').forEach(x=>{const active=x.dataset.page===page;x.classList.toggle('active',active);if(active)x.setAttribute('aria-current','page');else x.removeAttribute('aria-current');});window.scrollTo({top:0,behavior:'smooth'});if(page==='exercicios'){if(!quiz.length)startQuiz();if(!listeningOrder.length)startListeningQuiz();}}
+function go(page){stopHebrewAudio();if(page!=='exercicios'&&betReviewSession)window.betReviewClearPaid?.();window.betResumeCapture?.(true);if(page!=='aulas')window.betResumeDetach?.();if(page!=='aulas')window.betClearPaidView?.();document.querySelectorAll('.page').forEach(x=>x.classList.toggle('hidden',x.id!==page));document.querySelectorAll('nav button').forEach(x=>{const active=x.dataset.page===page;x.classList.toggle('active',active);if(active)x.setAttribute('aria-current','page');else x.removeAttribute('aria-current');});window.scrollTo({top:0,behavior:'smooth'});if(page==='exercicios'){if(!quiz.length)startQuiz();if(!listeningOrder.length)startListeningQuiz();}if(page==='perfil'){window.betRenderProfile?.();betRenderProfileProgress();}}
   
 function chaveProgresso() {
   return window.betUsuarioId
@@ -1496,7 +1575,8 @@ letters.forEach((letter,index)=>{
 const alphabetSummary=document.getElementById('alphabet-review-summary');
 if(alphabetSummary)alphabetSummary.textContent='Álef: demonstração opcional da parada glotal. As outras 21 letras: gravações humanas em hebraico, com arquivos locais ou do acervo Lingua Libre. Se uma fonte externa falhar, abra a página de origem.';
 
-function renderLessons(){document.getElementById('lessonList').innerHTML=lessons.map((l,i)=>`<button class="lesson" onclick="openLesson(${i})"><strong>${completed.includes(i)?'✓ ':''}Aula ${i+1}: ${l.title}</strong><span>${l.subtitle}${completed.includes(i)?' · Concluída':''}</span></button>`).join('');document.getElementById('progressText').textContent=`${completed.length} de ${lessons.length} aulas introdutórias concluídas.`;document.getElementById('progressBar').style.width=(completed.length/lessons.length*100)+'%';document.querySelector('.journey-card .progress')?.setAttribute('aria-valuenow',String(completed.length))}
+function betRenderProfileProgress(){const el=document.getElementById('bet-profile-progress');if(el)el.textContent=completed.length+' de '+lessons.length+' aulas gratuitas concluídas.';}
+function renderLessons(){betRenderProfileProgress();document.getElementById('lessonList').innerHTML=lessons.map((l,i)=>`<button class="lesson" onclick="openLesson(${i})"><strong>${completed.includes(i)?'✓ ':''}Aula ${i+1}: ${l.title}</strong><span>${l.subtitle}${completed.includes(i)?' · Concluída':''}</span></button>`).join('');document.getElementById('progressText').textContent=`${completed.length} de ${lessons.length} aulas introdutórias concluídas.`;document.getElementById('progressBar').style.width=(completed.length/lessons.length*100)+'%';document.querySelector('.journey-card .progress')?.setAttribute('aria-valuenow',String(completed.length))}
 function answerAlefBet(button){
   const card=button.closest('[data-ab-activity]');
   if(!card || card.dataset.solved==='true')return;
