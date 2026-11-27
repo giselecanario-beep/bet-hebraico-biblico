@@ -1,0 +1,14 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {entitlement} from './core.mjs';
+const now=1795780800000,link={"id":"demo","reference":"ref"},sub={"id":"demo","external_reference":"ref","status":"authorized","date_created":"2026-11-27T12:00:00.000Z","next_payment_date":"2026-12-04T12:00:00.000Z","auto_recurring":{"currency_id":"BRL","transaction_amount":19.9,"frequency":1,"frequency_type":"months","free_trial":{"frequency":7,"frequency_type":"days"}}},invoice={"preapproval_id":"demo","currency_id":"BRL","transaction_amount":19.9,"payment":{"status":"approved","status_detail":"accredited"},"verified":true,"debit_date":"2026-11-27T12:00:00.000Z"};
+test("trial authorized",()=>assert.equal((()=>entitlement(sub,link,[],now).active===true)(),true));
+test("pending denied",()=>assert.equal((()=>!entitlement({...sub,status:"pending"},link,[],now).active)(),true));
+test("expired trial denied",()=>assert.equal((()=>!entitlement(sub,{...link,trialEnd:now-1},[],now).active)(),true));
+test("paid renewal",()=>assert.equal((()=>entitlement(sub,{...link,trialEnd:now-1},[invoice],now).active)(),true));
+test("refund denied",()=>assert.equal((()=>!entitlement(sub,{...link,trialEnd:now-1},[{...invoice,verified:false}],now).active)(),true));
+test("paused denied",()=>assert.equal((()=>!entitlement({...sub,status:"paused"},link,[invoice],now).active)(),true));
+test("cancel retains paid time",()=>assert.equal((()=>entitlement({...sub,status:"cancelled"},{...link,trialEnd:now-1},[invoice],now).active)(),true));
+test("wrong reference rejected",()=>assert.equal((()=>{try{entitlement({...sub,external_reference:"other"},link,[],now);return false}catch{return true}})(),true));
+test("wrong price rejected",()=>assert.equal((()=>{try{entitlement({...sub,auto_recurring:{...sub.auto_recurring,transaction_amount:1}},link,[],now);return false}catch{return true}})(),true));
+test("no recurring free trial reset",()=>assert.equal((()=>!entitlement({...sub,next_payment_date:new Date(now+30*86400000).toISOString()},link,[],now).active)(),true));
