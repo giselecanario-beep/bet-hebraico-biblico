@@ -1,0 +1,82 @@
+"use strict";
+const assert=require("node:assert/strict");
+const {createCommercialService,CONSENT_VERSION,confirmSubscription,makeIntent,userIdentity}=require("./bet-commercial-core");
+const {createCommercialProvider}=require("./bet-commercial-provider");
+const {createCommercialStore}=require("./bet-commercial-store");
+const now=Date.parse("2026-11-27T15:00:00Z");
+const o={environment:"production",salesEnabled:true,sellerId:"1",applicationId:"3",planId:"a".repeat(32),priceCents:1990,currency:"BRL",trialDays:7,interval:"monthly"};
+const a={uid:"student_a_123",email:"a@example.com",email_verified:true},b={uid:"student_b_456",email:"b@example.com",email_verified:true};
+let counter=0;
+const reference=()=>("bet_live_"+(++counter).toString(16).padStart(48,"0"));
+const cardToken="fictional_token_123456";
+const input={consent:true,consentVersion:CONSENT_VERSION,cardToken};
+const recurring={currency_id:"BRL",transaction_amount:19.90,frequency:1,frequency_type:"months",free_trial:{frequency:7,frequency_type:"days"}};
+function fixture(){
+ const data=new Map();
+ let chain=Promise.resolve();
+ const snap=key=>({exists:data.has(key),data:()=>data.get(key)});
+ const db={collection:name=>({doc:id=>({key:name+"/"+id,get:async()=>snap(name+"/"+id)})}),runTransaction:fn=>{
+  const task=chain.then(async()=>{
+   const writes=[];
+   const result=await fn({get:async r=>snap(r.key),create:(r,x)=>{if(data.has(r.key))throw Error("exists");writes.push(()=>data.set(r.key,{...x}));},update:(r,x)=>writes.push(()=>data.set(r.key,{...data.get(r.key),...x}))});
+   writes.forEach(w=>w());return result;
+  });
+  chain=task.catch(()=>{});return task;
+ }};
+ const store=createCommercialStore(db,{Timestamp:{fromMillis:x=>x},FieldValue:{serverTimestamp:()=>now}});
+ const subscriptions=[];
+ let posts=0,fail=false;
+ const provider={verifyOffer:async()=>{},findByEmail:async email=>subscriptions.filter(x=>x.payer_email===email),get:async id=>subscriptions.find(x=>x.id===id),create:async p=>{
+  posts++;
+  const s={id:posts.toString(16).padStart(32,"0"),payer_id:100+posts,payer_email:p.payer_email,external_reference:p.external_reference,collector_id:1,application_id:3,preapproval_plan_id:o.planId,status:"authorized",date_created:new Date(now).toISOString(),next_payment_date:new Date(now+7*86400000).toISOString(),auto_recurring:recurring};
+  subscriptions.push(s);
+  if(fail)throw Error("uncertain POST");
+  return {id:s.id};
+ }};
+ const svc=createCommercialService({store,provider,offer:o,clock:()=>now,reference});
+ return {svc,store,provider,data,subscriptions,get posts(){return posts;},fail:()=>{fail=true;}};
+}
+(async()=>{
+ let f=fixture();
+ const disabled=createCommercialService({store:f.store,provider:f.provider,offer:{...o,salesEnabled:false},clock:()=>now,reference});
+ await assert.rejects(()=>disabled.checkout(a,input),/sales-disabled/);
+ await assert.rejects(()=>f.svc.checkout({...a,email_verified:false},input),/verified-auth-required/);
+ await assert.rejects(()=>f.svc.checkout(a,{...input,consent:false}),/consent-required/);
+ await assert.rejects(()=>f.svc.checkout(a,{...input,cardToken:"bad"}),/invalid-card-token/);
+ assert.equal(f.posts,0);
+ assert.throws(()=>userIdentity({...a,uid:"bet-test-fake1234"}),/verified-auth-required/);
+ assert.throws(()=>userIdentity({...a,email:"a@testuser.com"}),/fictional-account/);
+ const results=await Promise.all([f.svc.checkout(a,input),f.svc.checkout(a,input)]);
+ assert.equal(f.posts,1);
+ assert.ok(results.some(x=>x.state==="bound"));
+ assert.equal((await f.svc.checkout(a,input)).state,"bound");
+ assert.equal(f.posts,1);
+ assert.equal((await f.svc.checkout(b,input)).state,"bound");
+ assert.equal(f.posts,2);
+ assert.equal(f.data.get("betEntitlements/"+a.uid).active,true);
+ assert.equal(f.data.get("betEntitlements/"+b.uid).active,true);
+ assert.notEqual(f.data.get("betEntitlements/"+a.uid).subscriptionId,f.data.get("betEntitlements/"+b.uid).subscriptionId);
+ assert.ok(!JSON.stringify([...f.data]).includes(cardToken));
+ await assert.rejects(()=>f.svc.checkout({...a,uid:"other_student_123"},input),/existing-provider-subscription/);
+ await assert.rejects(()=>f.svc.recover({...a,email:b.email}),/intent-mismatch/);
+ const i=await f.store.read(a.uid),s=f.subscriptions[0];
+ for(const patch of [{external_reference:"wrong"},{collector_id:9},{application_id:9},{payer_email:b.email},{preapproval_plan_id:"b".repeat(32)},{auto_recurring:{...recurring,transaction_amount:1}}])assert.throws(()=>confirmSubscription(i,{...s,...patch},now));
+ f=fixture();f.fail();
+ assert.equal((await f.svc.checkout(a,input)).state,"uncertain");
+ assert.equal(f.posts,1);
+ assert.equal((await f.svc.recover(a)).state,"bound");
+ assert.equal(f.posts,1);
+ f=fixture();f.data.set("betEntitlements/"+a.uid,{role:"owner",source:"manual"});
+ await assert.rejects(()=>f.svc.checkout(a,input),/existing-lock-or-access/);
+ assert.equal(f.posts,0);
+ // Provider adapter uses an injected HTTP implementation, never Mercado Pago.
+ const calls=[];
+ const adapter=createCommercialProvider({token:"APP_USR-"+ "x".repeat(40),offer:o,fetchImpl:async(url,opts)=>{calls.push({url,method:opts.method,body:opts.body});return {ok:true,json:async()=>url.endsWith("/users/me")?{id:1,nickname:"real-merchant-fixture"}:url.includes("preapproval_plan/")?{id:o.planId,collector_id:1,application_id:3,status:"active",auto_recurring:recurring}:url.includes("/search?")?{paging:{total:0,offset:0,limit:12},results:[]}:{} };}});
+ await adapter.verifyOffer(o);
+ assert.deepEqual(await adapter.findByEmail(a.email,o),[]);
+ await adapter.cancel("c".repeat(32));
+ assert.equal(JSON.parse(calls.at(-1).body).status,"cancelled");
+ assert.equal(calls.at(-1).method,"PUT");
+ assert.throws(()=>createCommercialProvider({token:"TEST-"+ "x".repeat(40),offer:o}),/invalid-production-credential/);
+ console.log("Testes do nucleo comercial aprovados (simulados, sem pagamentos reais).");
+})().catch(e=>{console.error(e);process.exitCode=1;});
