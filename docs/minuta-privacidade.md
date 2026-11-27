@@ -2,7 +2,7 @@
 **Versão de trabalho, 27/11/2026. Não publicar antes de completar os campos e verificar o inventário efetivo de dados.**
 
 ## 1. Responsável e contato
-Controlador: [nome legal do responsável pelo BET]. Contato eletrônico para solicitações sobre dados pessoais: [confirmar]. Endereço e identificação do fornecedor: [confirmar em ambiente adequado].
+Controlador: [nome legal do responsável pelo BET]. Contato eletrônico para solicitações sobre dados pessoais: bet.hebraico@gmail.com. Endereço e identificação do fornecedor: [confirmar em ambiente adequado].
 
 ## 2. Dados e finalidades
 - Visitantes: o navegador pode guardar progresso, preferências e registros de revisão. A hospedagem e recursos de áudio externos podem receber informações técnicas de conexão.

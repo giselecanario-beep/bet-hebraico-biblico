@@ -2,7 +2,7 @@
 **Versão de trabalho, 27/11/2026. Não publicar antes de completar os campos indicados e revisar juridicamente.**
 
 ## 1. Identificação e atendimento
-Fornecedor: [nome legal]. CPF/CNPJ aplicável: [confirmar]. Endereço físico/comercial: [confirmar]. Endereço eletrônico e canal de atendimento, cancelamento, arrependimento, reembolso e privacidade: [confirmar]. O atendimento deverá confirmar o recebimento das solicitações e observar os prazos legais. Não inserir dados pessoais em repositório público.
+Fornecedor: [nome legal]. CPF/CNPJ aplicável: [confirmar]. Endereço físico/comercial: [confirmar]. Endereço eletrônico e canal de atendimento, cancelamento, arrependimento, reembolso e privacidade: bet.hebraico@gmail.com. O atendimento deverá confirmar o recebimento das solicitações e observar os prazos legais. Não inserir dados pessoais em repositório público.
 
 ## 2. Serviço educacional
 O BET é uma plataforma de aprendizagem de hebraico bíblico para iniciantes, com leitura, vocabulário, exercícios e explicações guiadas. A pronúncia israelense contemporânea é adotada como convenção de leitura, distinta das reconstruções históricas. A tutora oferece respostas guiadas, não atendimento humano em tempo real. Não se promete fluência em prazo específico nem certificação não anunciada. Aulas futuras poderão ser adicionadas progressivamente.
