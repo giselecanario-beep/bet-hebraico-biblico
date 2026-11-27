@@ -21,6 +21,7 @@ function createCheckoutStore(db,{Timestamp,FieldValue}){
   return db.runTransaction(async tx=>{
    const refs=[uidRef(i.uid),payerRef(lockKey(i)),subRef(b.subscriptionId),entitlement(i.uid)];
    const [uid,payer,sub,ent]=await Promise.all(refs.map(r=>tx.get(r)));
+   if(uid.exists&&uid.data().reference===i.reference&&uid.data().state==="bound"&&uid.data().subscriptionId===b.subscriptionId&&payer.exists&&payer.data().uid===i.uid&&payer.data().reference===i.reference&&payer.data().subscriptionId===b.subscriptionId&&sub.exists&&sub.data().uid===i.uid&&sub.data().reference===i.reference&&ent.exists&&ent.data().source==="mercadopago-test-individual")return;
    if(!uid.exists||uid.data().reference!==i.reference||!["reserved","uncertain"].includes(uid.data().state)||!payer.exists||payer.data().uid!==i.uid||payer.data().reference!==i.reference||sub.exists||ent.exists)throw Error("binding-lock-conflict");
    tx.update(refs[0],{state:"bound",subscriptionId:b.subscriptionId});
    tx.update(refs[1],{state:"bound",subscriptionId:b.subscriptionId});
@@ -36,6 +37,7 @@ function createCheckoutStore(db,{Timestamp,FieldValue}){
    }
   });
  }
- return {reserve,bind,markUncertain};
+ async function read(uid){const snap=await uidRef(uid).get();return snap.exists?snap.data():null;}
+ return {reserve,bind,markUncertain,read};
 }
 module.exports={createCheckoutStore};
