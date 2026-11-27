@@ -139,6 +139,31 @@ function createCommercialService({store,provider,offer,clock=Date.now,reference=
   if(checked.payerId!==c.b.payerId||checked.subscriptionId!==c.b.subscriptionId||!["cancelled","canceled"].includes(sub.status))throw Error("cancellation-unconfirmed");
   try{return await reconcileAccess(c.i,c.b,sub);}catch{return {state:"bound",status:sub.status,cancelled:true,reconciliationPending:true};}
  }
- return {checkout,recover,status,cancel};
+ // Internal entry point only. Never expose this function as a client action.
+ async function reconcileEvent(subscriptionId){
+  if(!idOK(subscriptionId))throw Error("invalid-subscription-id");
+  await provider.verifySeller();
+  const sub=await provider.get(subscriptionId);
+  if(sub.id!==subscriptionId)throw Error("provider-id-mismatch");
+  if(String(sub.collector_id)!==o.sellerId||String(sub.application_id)!==o.applicationId||sub.preapproval_plan_id!==o.planId)return {state:"ignored"};
+  let b=await store.eventBinding(subscriptionId);
+  if(!b){
+   const i=await store.referenceIntent(sub.external_reference);
+   if(!i)return {state:"ignored"};
+   sameIntent(i,userIdentity({uid:i.uid,email:i.email,email_verified:true}),o);
+   if(!["reserved","uncertain"].includes(i.state)||sub.status!=="authorized")throw Error("event-binding-pending");
+   await bind(i,sub);
+   b=await store.eventBinding(subscriptionId);
+   if(!b)throw Error("event-binding-pending");
+  }
+  const i=await store.read(b.uid);
+  if(!i)throw Error("intent-missing");
+  sameIntent(i,userIdentity({uid:i.uid,email:i.email,email_verified:true}),o);
+  const checked=confirmSubscription(i,sub,clock());
+  const locked=await store.readBinding(i);
+  if(locked.subscriptionId!==subscriptionId||checked.payerId!==b.payerId||locked.payerId!==b.payerId)throw Error("binding-mismatch");
+  return reconcileAccess(i,b,sub);
+ }
+ return {checkout,recover,status,cancel,reconcileEvent};
 }
 module.exports={CONSENT_VERSION,userIdentity,validateOffer,makeIntent,sameIntent,confirmSubscription,payload,createCommercialService};
