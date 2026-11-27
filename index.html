@@ -55,10 +55,19 @@
   border: 1px solid #751f32;
 }
 
-#mensagemLogin {
-  width: 100%;
-  color: #751f32;
-}
+#mensagemLogin {width:100%;color:#751f32;margin:4px 0;overflow-wrap:anywhere}
+#bet-login-form{display:flex;flex-direction:column;gap:10px;width:100%;min-width:0}
+#bet-password-wrap{position:relative;width:100%}
+#login-area #senha{padding-right:60px;min-height:48px}
+#login-area #bet-toggle-password{position:absolute;right:2px;top:2px;bottom:2px;min-height:44px;width:48px;padding:0;background:transparent;color:#751f32;display:grid;place-items:center;border:0}
+#bet-toggle-password svg{width:23px;height:23px;pointer-events:none}
+#bet-toggle-password[aria-pressed="true"] .eye-slash{display:block}
+#bet-toggle-password .eye-slash{display:none}
+#mensagemLogin:not(:empty){padding:12px;border:1px solid #d8bcb6;background:#fff7f2;border-radius:7px;font:16px/1.5 Arial,sans-serif}
+#mensagemLogin[data-kind="error"]{background:#fff1ee;color:#7f2525;border-color:#dba6a0}
+#mensagemLogin[data-kind="success"]{background:#edf5eb;color:#285b37;border-color:#b4cdb1}
+#bet-login-form button:disabled{opacity:.65;cursor:wait}
+#bet-toggle-password:focus-visible{outline:2px solid #751f32;outline-offset:-2px}
 
 @media (max-width: 560px) {
   nav {
@@ -488,7 +497,6 @@ button:focus-visible,a:focus-visible,input:focus-visible,summary:focus-visible{o
   import { initializeApp } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js";
   // Analytics opcional desativado nesta etapa.
     import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail, sendEmailVerification } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-auth.js";
-    import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-functions.js";
     import { getFirestore, doc, getDoc, getDocFromServer, setDoc, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-firestore.js";
 
   // TODO: Add SDKs for Firebase products that you want to use
@@ -512,7 +520,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,summary:focus-visible{o
     const auth = getAuth(app);
     
 const db = getFirestore(app);
-const officialFunctions=getFunctions(app,'us-central1');
+let officialFunctionsPromise;
 const progressoRef = (uid) => doc(db, "users", uid, "learning", "intro");
 
 async function salvarProgresso(uid, aulas) {
@@ -538,7 +546,11 @@ window.betResumeCloudWrite=async(uid,record)=>{
 const BET_CHECKOUT_ENABLED=true;
 const BET_CHECKOUT_URL='https://www.mercadopago.com.br/subscriptions/checkout?preapproval_plan_id=417a60404e374b1d935b238e20090873';
 let officialState=null,officialBusy=false,officialLast=0;
-const officialCall=(name,data)=>httpsCallable(officialFunctions,name)(data).then(r=>r.data);
+const officialCall=async(name,data)=>{
+ if(!officialFunctionsPromise)officialFunctionsPromise=import('https://www.gstatic.com/firebasejs/13.4.0/firebase-functions.js').catch(e=>{officialFunctionsPromise=null;throw e;});
+ const {getFunctions,httpsCallable}=await officialFunctionsPromise;
+ return (await httpsCallable(getFunctions(app,'us-central1'),name)(data)).data;
+};
 function betCheckoutCanOpen(enabled,uid,access){
  return enabled===true&&typeof uid==='string'&&uid.length>0&&access?.uid===uid&&access.checked===true&&access.active===false&&access.owner!==true&&access.collaborator!==true;
 }
@@ -781,60 +793,79 @@ if (user) {
     statusBar.style.display = "none";
     statusBar.innerHTML = "";
     if (areaLogin) areaLogin.style.display = "flex";
+    const p=document.getElementById('senha'),toggle=document.getElementById('bet-toggle-password');if(p){p.value='';p.type='password';}if(toggle){toggle.setAttribute('aria-pressed','false');toggle.setAttribute('aria-label','Mostrar senha');toggle.title='Mostrar senha';}
   }
   betRenderProfile();
 });
     
-document.getElementById("btn-criar")?.addEventListener("click", async () => {
-  const email = document.getElementById("email").value.trim();
-  const senha = document.getElementById("senha").value;
-  const mensagem = document.getElementById("mensagemLogin");
-
-  if (!email || !senha) {
-    mensagem.textContent = "Preencha seu e-mail e sua senha.";
-    return;
+const loginForm=document.getElementById('bet-login-form');
+const loginEmail=document.getElementById('email'),loginPassword=document.getElementById('senha');
+const loginStatus=document.getElementById('mensagemLogin');
+let loginBusy=false;
+function loginMessage(text,kind='info',code=''){
+ loginStatus.dataset.kind=kind;loginStatus.textContent=text;
+ if(code){const detail=document.createElement('small');detail.style.display='block';detail.style.marginTop='5px';detail.textContent='Código: '+code;loginStatus.append(detail);}
+}
+function loginError(code){
+ const messages={
+  'auth/invalid-credential':'E-mail ou senha incorretos. Confira os dados ou use “Esqueci a senha”.',
+  'auth/invalid-login-credentials':'E-mail ou senha incorretos. Confira os dados ou use “Esqueci a senha”.',
+  'auth/wrong-password':'E-mail ou senha incorretos. Confira os dados ou use “Esqueci a senha”.',
+  'auth/user-not-found':'E-mail ou senha incorretos. Confira os dados ou use “Esqueci a senha”.',
+  'auth/invalid-email':'O e-mail informado não é válido. Confira a digitação.',
+  'auth/email-already-in-use':'Este e-mail já está cadastrado. Clique em “Entrar” ou recupere a senha.',
+  'auth/weak-password':'Escolha uma senha mais forte. Use pelo menos seis caracteres e siga os requisitos indicados.',
+  'auth/password-does-not-meet-requirements':'A senha não atende aos requisitos de segurança. Escolha uma senha mais forte.',
+  'auth/too-many-requests':'Muitas tentativas de acesso. Tente novamente mais tarde ou recupere a senha.',
+  'auth/network-request-failed':'Não foi possível conectar. Confira sua internet e tente novamente.',
+  'auth/user-disabled':'Esta conta está desativada. Procure o atendimento do BET.',
+  'auth/operation-not-allowed':'A entrada por e-mail e senha não está disponível neste momento.',
+  'auth/unauthorized-domain':'Este endereço não está autorizado para entrar. Acesse bet-hebraico.web.app.',
+  'auth/invalid-api-key':'Não foi possível conectar ao serviço de autenticação do BET.',
+  'auth/app-not-authorized':'Não foi possível autorizar este aplicativo no serviço de autenticação.',
+  'auth/internal-error':'O serviço de autenticação encontrou um erro. Tente novamente.'
+ };
+ return messages[code]||'Não foi possível concluir a operação. Tente novamente e, se continuar, informe o código ao atendimento.';
+}
+function loginSetBusy(busy){
+ loginBusy=busy;
+ for(const id of ['btnEntrar','btn-criar','btn-recuperar'])document.getElementById(id).disabled=busy;
+ loginForm.setAttribute('aria-busy',String(busy));
+}
+async function betLoginAction(mode){
+ if(loginBusy)return;
+ const email=loginEmail.value.trim(),password=loginPassword.value;
+ if(!email||!loginEmail.validity.valid){loginMessage('Informe um e-mail válido.','error');loginEmail.focus();return;}
+ if(mode!=='reset'&&!password){loginMessage('Digite sua senha.','error');loginPassword.focus();return;}
+ if(mode==='create'&&password.length<6){loginMessage('A senha deve ter pelo menos seis caracteres.','error');loginPassword.focus();return;}
+ loginSetBusy(true);loginMessage(mode==='reset'?'Enviando instruções de recuperação…':mode==='create'?'Criando sua conta…':'Entrando na sua conta…');
+ try{
+  if(mode==='reset'){
+   await sendPasswordResetEmail(auth,email);
+   loginMessage('Se houver uma conta vinculada a esse e-mail, você receberá as instruções para redefinir a senha. Confira também o spam.','success');
+  }else{
+   const credential=mode==='create'?await createUserWithEmailAndPassword(auth,email,password):await signInWithEmailAndPassword(auth,email,password);
+   loginPassword.value='';
+   loginPassword.type='password';
+   const toggle=document.getElementById('bet-toggle-password');toggle.setAttribute('aria-pressed','false');toggle.setAttribute('aria-label','Mostrar senha');toggle.title='Mostrar senha';
+   const msg=mode==='create'?'Conta criada com sucesso!':'Você entrou com sucesso!';
+   loginMessage(msg,'success');
+   if(auth.currentUser?.uid===credential.user.uid){
+    const profile=document.getElementById('bet-profile-message');if(profile)profile.textContent=msg;
+    if(typeof go==='function')go('perfil');
+   }
   }
-
-  try {
-    await createUserWithEmailAndPassword(auth, email, senha);
-    mensagem.textContent = "Conta criada com sucesso!";
-  } catch (erro) {
-    mensagem.textContent = erro.code === "auth/email-already-in-use"
-      ? "Este e-mail já está cadastrado."
-      : "Não foi possível criar a conta. Confira os dados.";
-  }
-});
-
-document.getElementById("btnEntrar").addEventListener("click", async () => {
-  const email = document.getElementById("email").value.trim();
-  const senha = document.getElementById("senha").value;
-  const mensagem = document.getElementById("mensagemLogin");
-
-  if (!email || !senha) {
-    mensagem.textContent = "Preencha seu e-mail e sua senha.";
-    return;
-  }
-
-  try {
-    await signInWithEmailAndPassword(auth, email, senha);
-    mensagem.textContent = "Login realizado com sucesso!";
-  } catch (erro) {
-    mensagem.textContent = "Não foi possível entrar. Confira e-mail e senha.";
-  }
-});
-document.getElementById("btn-recuperar")?.addEventListener("click", async () => {
-  const email = document.getElementById("email")?.value.trim() || "";
-  if (!email) {
-    alert("Digite o seu e-mail no campo acima para recuperar a senha.");
-    return;
-  }
-  try {
-    await sendPasswordResetEmail(auth, email);
-    alert("E-mail de recuperação enviado. Verifique a caixa de entrada e o spam.");
-  } catch (erro) {
-    alert("Erro: " + (erro?.code || erro?.message || "desconhecido"));
-  }
-});
+ }catch(e){
+  if(mode==='reset'&&e?.code==='auth/user-not-found')loginMessage('Se houver uma conta vinculada a esse e-mail, você receberá as instruções para redefinir a senha.','success');
+  else loginMessage(loginError(e?.code),'error',typeof e?.code==='string'&&/^auth\/[a-z0-9-]+$/.test(e.code)?e.code:'');
+ }finally{loginSetBusy(false);}
+}
+loginForm.addEventListener('submit',e=>{e.preventDefault();void betLoginAction('login');});
+document.getElementById('btn-criar').addEventListener('click',()=>void betLoginAction('create'));
+document.getElementById('btn-recuperar').addEventListener('click',()=>void betLoginAction('reset'));
+window.betAuthReady=true;
+loginSetBusy(false);
+loginMessage('');
 </script>
 
   <header class="brand-header">
@@ -1061,12 +1092,22 @@ document.getElementById("btn-recuperar")?.addEventListener("click", async () => 
   <div id="login-area">
   <h2>Conta opcional</h2>
 <p class="beta-optional">Entre ou crie uma conta para sincronizar seu progresso entre aparelhos. O cadastro é opcional nas cinco primeiras aulas e necessário para assinar o BET Completo.</p>
-  <label for="email">E-mail</label><input type="email" id="email" placeholder="Seu e-mail" autocomplete="email">
-  <label for="senha">Senha</label><input type="password" id="senha" placeholder="Sua senha" autocomplete="current-password">
-  <button id="btnEntrar">Entrar</button>
-  <button id="btn-criar" class="btn-secondary">Criar conta</button>
-  <button type="button" id="btn-recuperar" style="background:none;border:none;color:#751f32;text-decoration:underline;cursor:pointer;font-family:Georgia,serif;font-size:0.95rem;text-align:left;padding:4px 0;">Esqueci a senha</button>
-  <p id="mensagemLogin"></p>
+  <form id="bet-login-form" novalidate>
+  <label for="email">E-mail</label><input type="email" id="email" placeholder="Seu e-mail" autocomplete="email" autocapitalize="none" spellcheck="false" required>
+  <label for="senha">Senha</label><div id="bet-password-wrap"><input type="password" id="senha" placeholder="Sua senha" autocomplete="current-password" required><button type="button" id="bet-toggle-password" aria-label="Mostrar senha" aria-pressed="false" aria-controls="senha" title="Mostrar senha"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/><path class="eye-slash" d="M3 3l18 18"/></svg></button></div>
+  <p id="mensagemLogin" role="status" aria-live="polite">Conectando ao BET…</p>
+  <button type="submit" id="btnEntrar" disabled>Entrar</button>
+  <button type="button" id="btn-criar" class="btn-secondary" disabled>Criar conta</button>
+  <button type="button" id="btn-recuperar" disabled style="background:none;border:none;color:#751f32;text-decoration:underline;cursor:pointer;font-family:Georgia,serif;font-size:0.95rem;text-align:left;padding:4px 0;">Esqueci a senha</button>
+  </form>
+  <script>
+  (function(){
+    const form=document.getElementById('bet-login-form'),pass=document.getElementById('senha'),toggle=document.getElementById('bet-toggle-password'),msg=document.getElementById('mensagemLogin');
+    toggle.addEventListener('click',()=>{const visible=pass.type==='password';pass.type=visible?'text':'password';toggle.setAttribute('aria-pressed',String(visible));const label=visible?'Ocultar senha':'Mostrar senha';toggle.setAttribute('aria-label',label);toggle.title=label;});
+    form.addEventListener('submit',e=>{if(!window.betAuthReady)e.preventDefault();});
+    setTimeout(()=>{if(!window.betAuthReady){msg.dataset.kind='error';msg.textContent='Não foi possível conectar ao serviço de login. Confira sua internet, atualize a página e tente novamente.';}},15000);
+  })();
+  </script>
 </div>
  </details>
 </aside>
