@@ -48,6 +48,13 @@ function createCommercialStore(db,{Timestamp,FieldValue}){
   if(!owns(snap,i)||b.environment!=="production"||b.subscriptionId!==i.subscriptionId||b.emailKey!==i.emailKey||b.planId!==i.planId||b.sellerId!==i.sellerId||b.applicationId!==i.applicationId)throw Error("binding-lock-conflict");
   return b;
  }
+ async function assertManagement(i,b){
+  await db.runTransaction(async tx=>{
+   const refs=[uidRef(i.uid),emailRef(i),refRef(i),payerRef(b),subRef(b),entRef(i.uid)];
+   const [u,e,r,p,s,a]=await Promise.all(refs.map(x=>tx.get(x)));
+   if(![u,e,r,p,s].every(x=>owns(x,i)&&x.data().subscriptionId===b.subscriptionId)||!a.exists||a.data().source!=="mercadopago-commercial"||a.data().subscriptionId!==b.subscriptionId||a.data().role!=="subscriber")throw Error("protected-entitlement");
+  });
+ }
  async function reconcile(i,b,access,sub,now){
   return db.runTransaction(async tx=>{
    const refs=[uidRef(i.uid),emailRef(i),refRef(i),payerRef(b),subRef(b),entRef(i.uid)];
@@ -60,6 +67,6 @@ function createCommercialStore(db,{Timestamp,FieldValue}){
    return access;
   });
  }
- return {read,reserve,markUncertain,bind,readBinding,reconcile};
+ return {read,reserve,markUncertain,bind,readBinding,assertManagement,reconcile};
 }
 module.exports={createCommercialStore};
