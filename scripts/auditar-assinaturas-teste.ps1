@@ -14,13 +14,14 @@ function MP-Get([string]$path){
 }
 function Read-Pages([string]$path){
  $all=@()
- for($offset=0;$offset -lt 250;$offset+=50){
-  $page=MP-Get "$path&limit=50&offset=$offset"
-  if($null -eq $page.paging.total -or $null -eq $page.paging.offset -or [int]$page.paging.offset -ne $offset -or [int]$page.paging.total -lt 0 -or !$page.PSObject.Properties['results']){throw 'Invalid pagination'}
+ $limit=if($path.StartsWith("/authorized_payments/search?")){12}else{50}
+ for($offset=0;$offset -lt ($limit*25);$offset+=$limit){
+  $page=MP-Get "$path&limit=$limit&offset=$offset"
+  if($null -eq $page.paging.total -or $null -eq $page.paging.offset -or [int]$page.paging.offset -ne $offset -or [int]$page.paging.total -lt 0 -or $null -eq $page.paging.limit -or [int]$page.paging.limit -ne $limit -or !$page.PSObject.Properties['results']){throw 'Invalid pagination'}
   $rows=@($page.results | Where-Object {$null -ne $_})
   $all+= $rows
   if(($offset+$rows.Count) -ge [int]$page.paging.total){return $all}
-  if($rows.Count -ne 50){throw 'Incomplete pagination'}
+  if($rows.Count -ne $limit){throw 'Incomplete pagination'}
  }
  throw 'Search limit'
 }
