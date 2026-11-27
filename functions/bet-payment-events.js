@@ -1,4 +1,5 @@
 "use strict";
+const {listInvoices}=require("./bet-invoice-pages");
 function invoiceMatches(i,cfg,paymentId){return i?.preapproval_id===cfg.subscriptionId&&String(i?.payment?.id)===String(paymentId);}
 async function eventMatches(type,id,cfg,mp){
  if(type==="subscription_preapproval")return id.toLowerCase()===cfg.subscriptionId.toLowerCase();
@@ -10,9 +11,7 @@ async function eventMatches(type,id,cfg,mp){
  if(type==="payment"||type==="payments"){
   const payment=await mp("/v1/payments/"+encodeURIComponent(id));
   if(String(payment.id)!==id||String(payment.collector_id)!==String(cfg.sellerId))return false;
-  const page=await mp("/authorized_payments/search?preapproval_id="+encodeURIComponent(cfg.subscriptionId)+"&payment_id="+encodeURIComponent(id)+"&limit=20&offset=0");
-  if(!Array.isArray(page.results))throw Error("invalid invoice search");
-  return page.results.some(i=>invoiceMatches(i,cfg,id));
+  return (await listInvoices(mp,cfg.subscriptionId)).some(i=>invoiceMatches(i,cfg,id));
  }
  return false;
 }
