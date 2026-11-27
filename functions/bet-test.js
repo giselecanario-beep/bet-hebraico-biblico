@@ -107,12 +107,10 @@ exports.betTestWebhook=onRequest({region:"us-central1",secrets:[token,config,web
  try{
   const cfg=configuration();
   await checkProvider(cfg);
-  const offer=individualOffer(cfg);
-  const individual=await individualBinding(offer);
-  const choices=[cfg,...(individual?[individual]:[])];
-  let matched=null;
-  for(const candidate of choices){
-   if(await eventMatches(type,id,candidate,mp)){if(matched)throw Error("ambiguous event");matched=candidate;}
+  let matched=await eventMatches(type,id,cfg,mp)?cfg:null;
+  if(!matched){
+   const individual=await individualBinding(individualOffer(cfg));
+   if(individual&&await eventMatches(type,id,individual,mp))matched=individual;
   }
   if(!matched){res.status(200).end();return;}
   const sub=await getSubscription(matched);
@@ -154,6 +152,7 @@ exports.betTestCheckout=onCall({region:"us-central1",secrets:[token,config,check
   await checkProvider(b);
   let sub=await getSubscription(b);
   if(action==="cancel"){
+   protect(await db.collection("betEntitlements").doc(b.uid).get(),"mercadopago-test-individual");
    if(req.data?.confirm!==true)throw new HttpsError("invalid-argument","Confirme o cancelamento.");
    if(!["canceled","cancelled"].includes(sub.status)){
     await mp("/preapproval/"+encodeURIComponent(b.subscriptionId),{status:"canceled"});
