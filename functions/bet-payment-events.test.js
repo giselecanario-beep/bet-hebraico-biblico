@@ -4,7 +4,8 @@ const {eventMatches}=require("./bet-payment-events");
 const cfg={subscriptionId:"abc",sellerId:"12"};
 const invoice={id:55,preapproval_id:"abc",payment:{id:99}};
 const payment={id:99,collector_id:12,status:"refunded"};
-const mp=async path=>path.startsWith("/v1/payments/")?payment:path.startsWith("/authorized_payments/search?")?{results:[invoice]}:invoice;
+const page=rows=>({results:rows,paging:{total:rows.length,offset:0,limit:12}});
+const mp=async path=>path.startsWith("/v1/payments/")?payment:path.startsWith("/authorized_payments/search?")?page([invoice]):invoice;
 (async()=>{
  assert.equal(await eventMatches("subscription_preapproval","abc",cfg,mp),true);
  assert.equal(await eventMatches("subscription_preapproval","other",cfg,mp),false);
@@ -13,9 +14,9 @@ const mp=async path=>path.startsWith("/v1/payments/")?payment:path.startsWith("/
  assert.equal(await eventMatches("payment","99",cfg,mp),true);
  assert.equal(await eventMatches("payments","99",cfg,mp),true);
  assert.equal(await eventMatches("payment","100",cfg,mp),false);
- assert.equal(await eventMatches("payment","99",cfg,async p=>p.startsWith("/v1/")?{...payment,collector_id:13}:{results:[invoice]}),false);
- assert.equal(await eventMatches("payment","99",cfg,async p=>p.startsWith("/v1/")?payment:{results:[{...invoice,preapproval_id:"other"}]}),false);
- assert.equal(await eventMatches("payment","99",cfg,async p=>p.startsWith("/v1/")?payment:{results:[{...invoice,payment:{id:100}}]}),false);
+ assert.equal(await eventMatches("payment","99",cfg,async p=>p.startsWith("/v1/")?{...payment,collector_id:13}:page([invoice])),false);
+ await assert.rejects(()=>eventMatches("payment","99",cfg,async p=>p.startsWith("/v1/")?payment:page([{...invoice,preapproval_id:"other"}])));
+ assert.equal(await eventMatches("payment","99",cfg,async p=>p.startsWith("/v1/")?payment:page([{...invoice,payment:{id:100}}])),false);
  assert.equal(await eventMatches("payment","bad/id",cfg,mp),false);
  assert.equal(await eventMatches("subscription_preapproval_plan","abc",cfg,mp),false);
  await assert.rejects(()=>eventMatches("payment","99",cfg,async p=>p.startsWith("/v1/")?payment:{}));
