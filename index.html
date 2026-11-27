@@ -514,25 +514,37 @@ const db = getFirestore(app);
 
 const betTestPreview=/^bet-hebraico--[a-z0-9-]+\.web\.app$/.test(location.hostname);
 if(betTestPreview){
- const testCall=async activate=>{
-  const user=auth.currentUser, msg=document.getElementById('bet-test-message');
-  if(!user){msg.textContent='Entre na sua conta BET autorizada para o teste.';return;}
-  const buttons=[...document.querySelectorAll('#bet-test-panel button')];
+ let busy=false, queuedUser=null, lastUser=null;
+ const testCall=async(action,quiet=false)=>{
+  const user=auth.currentUser,msg=document.getElementById('bet-test-message');
+  if(!user||!msg||busy)return;
+  if(action==='cancel'&&!confirm('Cancelar somente a assinatura fictícia? O período de teste gratuito será encerrado. Essa ação não cancela sua conta BET nem apaga seu progresso.'))return;
+  busy=true;const buttons=[...document.querySelectorAll('#bet-test-panel button')];
   buttons.forEach(b=>b.disabled=true);msg.textContent='Consultando o Mercado Pago…';
   try{
    const {getFunctions,httpsCallable}=await import('https://www.gstatic.com/firebasejs/13.4.0/firebase-functions.js');
-   const {data}=await httpsCallable(getFunctions(app,'us-central1'),'betTestSubscription')({activate});
-   if(auth.currentUser?.uid!==user.uid){msg.textContent='A conta mudou. Consulte novamente.';return;}
-   msg.textContent=data.trialActive?'Teste confirmado até '+new Date(data.validUntil).toLocaleString('pt-BR')+(data.applied?'. Autorização temporária aplicada.':'. A autorização ainda não foi aplicada.'):'A assinatura não possui período gratuito ativo.';
+   const {data}=await httpsCallable(getFunctions(app,'us-central1'),'betTestSubscription',{timeout:100000})({action,confirm:action==='cancel'});
+   if(auth.currentUser?.uid!==user.uid)return;
+   const date=new Date(data.validUntil).toLocaleString('pt-BR');
+   msg.textContent=(data.cancelled?'Cancelamento confirmado. Renovação interrompida. ':'')+(data.active?(data.reason==='paid'?'Período pago válido até ':'Teste gratuito válido até ')+date+'.':'Nenhum período de acesso ativo.');
    if(data.applied)await window.betConsultarAssinatura?.(user);
-  }catch(e){msg.textContent=e?.message||'Não foi possível consultar a assinatura de teste.';}
-  finally{buttons.forEach(b=>b.disabled=false);}
+  }catch(e){
+   if(auth.currentUser?.uid===user.uid)msg.textContent=quiet&&e?.code==='functions/permission-denied'?'Esta conta não participa do teste de assinaturas.':e?.message||'Não foi possível consultar a assinatura.';
+  }finally{
+   busy=false;buttons.forEach(b=>b.disabled=false);
+   if(queuedUser&&auth.currentUser?.uid===queuedUser){queuedUser=null;void testCall('sync',true);}else queuedUser=null;
+  }
  };
  const setupBetTest=()=>{
   const panel=document.getElementById('bet-test-panel');if(!panel)return;
   panel.hidden=false;
-  document.getElementById('bet-test-check').addEventListener('click',()=>testCall(false));
-  document.getElementById('bet-test-activate').addEventListener('click',()=>testCall(true));
+  document.getElementById('bet-test-check').addEventListener('click',()=>testCall('sync'));
+  document.getElementById('bet-test-cancel').addEventListener('click',()=>testCall('cancel'));
+  onAuthStateChanged(auth,user=>{
+   const uid=user?.uid||null;if(uid===lastUser)return;lastUser=uid;
+   document.getElementById('bet-test-message').textContent=user?'Verificando acesso…':'Entre na conta BET autorizada.';
+   if(user){if(busy)queuedUser=uid;else void testCall('sync',true);}
+  });
  };
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setupBetTest,{once:true});else setupBetTest();
 }
@@ -1012,9 +1024,9 @@ document.getElementById("btn-recuperar")?.addEventListener("click", async () => 
    <button type="button" id="bet-profile-refresh" class="secondary" onclick="window.betAtualizarAssinatura?.()" hidden>Atualizar status</button>
    <p class="small">As vendas ainda não estão abertas nesta versão beta.</p>
    <div id="bet-test-panel" hidden>
-    <p class="small"><strong>Ambiente de teste privado:</strong> somente a conta de teste autorizada pode validar a assinatura. Nenhuma cobrança é iniciada aqui.</p>
-    <button type="button" class="secondary" id="bet-test-check">Verificar assinatura de teste</button>
-    <button type="button" class="secondary" id="bet-test-activate">Aplicar acesso de teste</button>
+    <p class="small"><strong>Ambiente de teste:</strong> a conta autorizada sincroniza o acesso automaticamente ao entrar. Nenhuma venda real é iniciada aqui.</p>
+    <button type="button" class="secondary" id="bet-test-check">Atualizar assinatura de teste</button>
+    <button type="button" class="secondary" id="bet-test-cancel">Cancelar assinatura de teste</button>
     <p class="small" id="bet-test-message" role="status" aria-live="polite"></p>
    </div>
   </section>
