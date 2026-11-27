@@ -27,7 +27,7 @@ function betInitCommercialUI(){
  <button id="bet-live-submit" type="submit" class="primary" disabled>Iniciar 7 dias grátis</button>
  </form>`;
  panel.appendChild(section);
- const pilot=/^bet-hebraico--comercial-piloto-[a-z0-9-]+\.web\.app$/.test(location.hostname);
+ const pilot=location.hostname==='bet-hebraico.web.app'||/^bet-hebraico--comercial-piloto-[a-z0-9-]+\.web\.app$/.test(location.hostname);
  const form=$('bet-live-form'),msg=$('bet-live-status'),consent=$('bet-live-consent'),submit=$('bet-live-submit');
  let epoch=0,uid=null,setup=null,card=null,ready=false,busy=false,sdkPromise=null;
  const isCurrent=(e,u)=>epoch===e&&auth.currentUser?.uid===u;
@@ -93,7 +93,7 @@ function betInitCommercialUI(){
  $('bet-live-recover').addEventListener('click',()=>manage('recover'));
  $('bet-live-cancel').addEventListener('click',()=>manage('cancel'));
  $('bet-live-verify').addEventListener('click',async()=>{const user=auth.currentUser,e=epoch;if(!user)return;try{const {sendEmailVerification}=await import('https://www.gstatic.com/firebasejs/13.4.0/firebase-auth.js');await sendEmailVerification(user);if(isCurrent(e,user.uid))msg.textContent='Confirmação enviada. Confira sua caixa de entrada e spam.';}catch{if(isCurrent(e,user.uid))msg.textContent='Não foi possível enviar a confirmação.';}});
- $('bet-live-pilot-id').addEventListener('click',async()=>{if(!pilot||!auth.currentUser?.emailVerified)return;try{await navigator.clipboard.writeText(auth.currentUser.uid);msg.textContent='Identificação da conta piloto copiada. Não é uma senha.';}catch{msg.textContent='Não foi possível copiar a identificação.';}});
+ $('bet-live-pilot-id').addEventListener('click',async()=>{if(!pilot||!auth.currentUser?.emailVerified||setup?.enabled||setup?.protectedAccess)return;try{await navigator.clipboard.writeText(auth.currentUser.uid);msg.textContent='Identificação da sua conta copiada. Não é uma senha.';}catch{msg.textContent='Não foi possível copiar a identificação.';}});
  onAuthStateChanged(auth,user=>{epoch++;uid=user?.uid||null;busy=false;setup=null;clear();buttons({});$('bet-live-verify').hidden=true;$('bet-live-pilot-id').hidden=true;msg.textContent=user?'Clique em Consultar assinatura.':'Entre na sua conta BET.';});
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',betInitCommercialUI,{once:true});else betInitCommercialUI();
