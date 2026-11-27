@@ -47,7 +47,7 @@ function createCheckoutService({store,provider,offer,clock=Date.now,reference=()
   if(!["reserved","uncertain"].includes(intent.state))throw Error("unknown-intent-state");
   // Recovery never sends a POST, retries a charge or releases an unresolved lock.
   await provider.verifyOffer(offer);
-  const candidates=await provider.findByReference(intent.reference);
+  const candidates=await provider.findByReference(intent.reference,offer);
   if(!Array.isArray(candidates))throw Error("invalid-search-result");
   if(candidates.length!==1)return {state:"uncertain",reference:intent.reference};
   const id=candidates[0]?.id;
