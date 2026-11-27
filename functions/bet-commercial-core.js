@@ -128,14 +128,16 @@ function createCommercialService({store,provider,offer,clock=Date.now,reference=
   if(input?.confirm!==true)throw Error("confirmation-required");
   const c=await managementContext(auth);
   if(!c)throw Error("subscription-not-found");
-  const before=await reconcileAccess(c.i,c.b,c.sub);
-  if(before.cancelled)return before;
+  await store.assertManagement(c.i,c.b);
+  if(["cancelled","canceled"].includes(c.sub.status)){
+   try{return await reconcileAccess(c.i,c.b,c.sub);}catch{return {state:"bound",status:c.sub.status,cancelled:true,reconciliationPending:true};}
+  }
   if(!["authorized","paused","pending"].includes(c.sub.status))throw Error("invalid-cancellation-state");
   // No client-chosen subscription ID. One PUT, then independent GET. No automatic retry.
   await provider.cancel(c.b.subscriptionId);
   const sub=await provider.get(c.b.subscriptionId),checked=confirmSubscription(c.i,sub,clock());
   if(checked.payerId!==c.b.payerId||checked.subscriptionId!==c.b.subscriptionId||!["cancelled","canceled"].includes(sub.status))throw Error("cancellation-unconfirmed");
-  return reconcileAccess(c.i,c.b,sub);
+  try{return await reconcileAccess(c.i,c.b,sub);}catch{return {state:"bound",status:sub.status,cancelled:true,reconciliationPending:true};}
  }
  return {checkout,recover,status,cancel};
 }
