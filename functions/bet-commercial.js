@@ -15,7 +15,7 @@ function context(){
  if(!/^APP_USR-[a-f0-9-]{36}$/i.test(o.publicKey||"")||!["closed","pilot","open"].includes(o.launchMode))throw Error("invalid-configuration");
  const db=getFirestore(),store=createCommercialStore(db,{Timestamp,FieldValue});
  const offer={...o,salesEnabled:o.launchMode==="open"||o.launchMode==="pilot"};
- const provider=createCommercialProvider({token:token.value(),offer});
+ const provider=createCommercialProvider({token:token.value().trim(),offer});
  return {db,store,provider,offer,service:createCommercialService({store,provider,offer})};
 }
 const cors=["https://bet-hebraico.web.app",/^https:\/\/bet-hebraico--[a-z0-9-]+\.web\.app$/];
@@ -37,7 +37,7 @@ exports.betCommercialCheckout=onCall({region:"us-central1",secrets:[token,config
   if(action==="create"&&!permitted)throw Error("sales-disabled");
   if(!permitted&&!i)throw Error("sales-disabled");
   // Per-account throttling for network-intensive actions; no card information is stored.
-  const rate=db.collection("betCommercialRateLimits").doc(auth.uid),now=Date.now();
+  const rate=db.collection("betCommercialRateLimits").doc(auth.uid+"_"+action),now=Date.now();
   await db.runTransaction(async tx=>{
    const snap=await tx.get(rate),last=snap.data()?.last||0;
    if(now-last<1500)throw new HttpsError("resource-exhausted","Aguarde um instante e consulte novamente.");
