@@ -23,7 +23,7 @@ async function mpGet(path){
  if(!res.ok)throw new HttpsError("unavailable","Não foi possível confirmar os dados no Mercado Pago.");
  return res.json();
 }
-exports.betTestSubscription=onCall({region:"us-central1",secrets:[token,config],maxInstances:1,minInstances:0,concurrency:1,memory:"256MiB",timeoutSeconds:30,cors:["https://bet-hebraico.web.app","https://bet-hebraico.firebaseapp.com"]},async req=>{
+exports.betTestSubscription=onCall({region:"us-central1",secrets:[token,config],maxInstances:1,minInstances:0,concurrency:1,memory:"256MiB",timeoutSeconds:30,cors:[/^https:\/\/bet-hebraico--[a-z0-9-]+\.web\.app$/]},async req=>{
  if(!req.auth)throw new HttpsError("unauthenticated","Entre no BET.");
  let cfg;
  try{cfg=JSON.parse(config.value());}catch{throw new HttpsError("failed-precondition","Teste não configurado.");}
