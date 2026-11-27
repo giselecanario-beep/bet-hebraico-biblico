@@ -3,7 +3,7 @@ $ErrorActionPreference='Stop'
 $project='bet-hebraico'
 $base='https://raw.githubusercontent.com/giselecanario-beep/bet-hebraico-biblico/b94537262efbf7f620e674807d197cf03f80329f'
 if(!(Test-Path 'firebase.json') -or !(Test-Path 'functions/index.js') -or !(Test-Path 'public/index.html')){throw 'Abra o PowerShell na pasta BET'}
-function MP([string]$path,[string]$method='GET',$body=$null){
+function Invoke-BetMercadoPago([string]$path,[string]$method='GET',$body=$null){
  $argsMP=@{Uri=("https://api.mercadopago.com"+$path);Headers=@{Authorization="Bearer $token"};Method=$method;TimeoutSec=25}
  if($null -ne $body){$argsMP.ContentType='application/json';$argsMP.Body=($body|ConvertTo-Json -Depth 8 -Compress)}
  Invoke-RestMethod @argsMP
@@ -24,13 +24,13 @@ try{
  $publicKey=(Read-Host 'Cole a Public Key de producao').Trim()
  $appId=(Read-Host 'Cole o ID numerico da aplicacao real').Trim()
  if($token -notmatch '^APP_USR-[A-Za-z0-9-]{30,}$' -or $publicKey -notmatch '^APP_USR-[a-fA-F0-9-]{36}$' -or $appId -notmatch '^\d{6,25}$' -or $appId -eq '3362162224734954'){throw 'Credenciais invalidas ou aplicacao ficticia'}
- $me=MP '/users/me'
+ $me=Invoke-BetMercadoPago '/users/me'
  if("$($me.id)" -notmatch '^\d+$' -or "$($me.id)" -in @('3875619579','3880684960') -or !$me.nickname -or $me.nickname -match '^TESTUSER'){throw 'Vendedor real nao confirmado'}
  Write-Host 'Vendedor real confirmado.'
  Write-Host '2/4 - Localizando plano comercial de R$ 19,90 e 7 dias gratuitos...'
  $matches=@();$limit=20;$done=$false
  for($offset=0;$offset -lt 400;$offset+=$limit){
-  $page=MP "/preapproval_plan/search?limit=$limit&offset=$offset"
+  $page=Invoke-BetMercadoPago "/preapproval_plan/search?limit=$limit&offset=$offset"
   if($null -eq $page.paging.total -or [int]$page.paging.offset -ne $offset){throw 'Busca de planos incompleta'}
   $rows=@($page.results|Where-Object {$_})
   $matches+=@($rows|Where-Object { $_.reason -match 'BET' -and (PlanOK $_) })
@@ -39,13 +39,13 @@ try{
  }
  if(!$done){throw 'Busca incompleta; nenhum plano criado'}
  if($matches.Count -gt 1){throw 'Mais de um plano BET encontrado; selecao manual necessaria'}
- if($matches.Count -eq 1){$p=MP "/preapproval_plan/$($matches[0].id)"}
+ if($matches.Count -eq 1){$p=Invoke-BetMercadoPago "/preapproval_plan/$($matches[0].id)"}
  else{
   Write-Host 'Nenhum plano compativel encontrado. Criar plano BET comercial (nao cobra ninguem e nao cria assinatura)?'
   if((Read-Host 'Digite CRIAR para confirmar') -cne 'CRIAR'){return}
-  $p=MP '/preapproval_plan' 'POST' @{reason='BET | Hebraico Biblico';back_url='https://bet-hebraico.web.app/';auto_recurring=@{frequency=1;frequency_type='months';transaction_amount=19.90;currency_id='BRL';free_trial=@{frequency=7;frequency_type='days'}}}
+  $p=Invoke-BetMercadoPago '/preapproval_plan' 'POST' @{reason='BET | Hebraico Biblico';back_url='https://bet-hebraico.web.app/';auto_recurring=@{frequency=1;frequency_type='months';transaction_amount=19.90;currency_id='BRL';free_trial=@{frequency=7;frequency_type='days'}}}
   if($p.id -notmatch '^[a-f0-9]{32}$'){throw 'Criacao do plano inconclusiva; nao repita'}
-  $p=MP "/preapproval_plan/$($p.id)"
+  $p=Invoke-BetMercadoPago "/preapproval_plan/$($p.id)"
  }
  if(!(PlanOK $p)){throw 'Plano nao confirmado; nao abra vendas'}
  Write-Host 'Plano comercial confirmado.'
@@ -71,7 +71,10 @@ try{
  firebase.cmd deploy --only 'functions:betCommercialCheckout' --project $project --non-interactive
  if($LASTEXITCODE -ne 0){throw 'Publicacao nao confirmada'}
  Write-Host 'CONFIGURACAO COMERCIAL CONCLUIDA - CHECKOUT FECHADO; NENHUMA COBRANCA OU ASSINATURA CRIADA.' -ForegroundColor Green
-}catch{
+ }catch{
+ $http=$null
+ try{$http=[int]$_.Exception.Response.StatusCode}catch{}
+ if($http){Write-Host "HTTP do provedor: $http" -ForegroundColor Yellow}
  Write-Host 'Etapa interrompida. Nao repita automaticamente. Envie apenas a ultima etapa exibida, sem credenciais.' -ForegroundColor Yellow
 }finally{
  Remove-Variable token,secure,cfg,argsMP -ErrorAction SilentlyContinue
