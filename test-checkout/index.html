@@ -1,0 +1,24 @@
+<!doctype html><html lang="pt-BR"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>BET — teste de assinatura</title><style>body{font:17px system-ui;background:#fbf5eb;color:#4c1927;margin:0;padding:22px}main{max-width:560px;margin:auto}input,button{font:inherit;min-height:44px;box-sizing:border-box;border:1px solid #805763;border-radius:7px;padding:9px;width:100%;margin:6px 0 12px}button{background:#6b2339;color:white;cursor:pointer}button:disabled{opacity:.6}label{display:block}section{border:1px solid #e2cfbd;padding:18px;border-radius:12px}#status{white-space:pre-wrap}small{color:#594650}</style><main><h1>BET | Hebraico Bíblico</h1><h2>Teste reservado de assinatura</h2><p>Ambiente de teste. Use apenas a conta BET reservada e cartão de teste do Mercado Pago. Não informe dados de cartão real.</p><section id="login"><form id="form"><label for="email">E-mail BET de teste</label><input id="email" type="email" autocomplete="username" required><label for="password">Senha</label><input id="password" type="password" autocomplete="current-password" required><button>Entrar</button></form></section><section id="actions" hidden><p id="account"></p><p>7 dias gratuitos, depois R$ 19,90/mês (simulação).</p><button id="start">Abrir checkout de teste</button><button id="sync">Consultar e liberar acesso de teste</button><button id="cancel">Cancelar assinatura de teste</button><button id="exit">Sair</button></section><p id="status" role="status" aria-live="polite"></p></main><script type="module">
+import {initializeApp} from 'https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js';
+import {getAuth,signInWithEmailAndPassword,onAuthStateChanged,signOut} from 'https://www.gstatic.com/firebasejs/13.4.0/firebase-auth.js';
+import {getFunctions,httpsCallable} from 'https://www.gstatic.com/firebasejs/13.4.0/firebase-functions.js';
+const firebaseConfig = {
+    apiKey: "AIzaSyC4CPhtjFKxFFijIgwG8g1Lx4hEkbxKzLw",
+    authDomain: "bet-hebraico.firebaseapp.com",
+    projectId: "bet-hebraico",
+    storageBucket: "bet-hebraico.firebasestorage.app",
+    messagingSenderId: "770607412120",
+    appId: "1:770607412120:web:3c64ae8e16e27253c231ed"
+  };
+const app=initializeApp(firebaseConfig),auth=getAuth(app),functions=getFunctions(app,'us-central1');
+const el=id=>document.getElementById(id),status=message=>el('status').textContent=message;
+let busy=false;
+async function run(fn){if(busy)return;busy=true;document.querySelectorAll('button').forEach(b=>b.disabled=true);try{await fn()}catch(e){status('Não concluído: '+(e.message||'Erro desconhecido'))}finally{busy=false;document.querySelectorAll('button').forEach(b=>b.disabled=false)}}
+function describe(d){status('Situação: '+(d.status||'sem assinatura')+'\nAcesso: '+(d.active?'liberado':'bloqueado')+(d.active?'\nValidade: '+new Date(d.validUntil).toLocaleString('pt-BR'):''))}
+el('form').onsubmit=e=>{e.preventDefault();run(async()=>{await signInWithEmailAndPassword(auth,el('email').value,el('password').value);el('password').value=''})};
+onAuthStateChanged(auth,u=>{el('login').hidden=!!u;el('actions').hidden=!u;el('account').textContent=u?.email||'';status(u?'Conta conectada.':'Entre na conta de teste.')});
+el('start').onclick=()=>run(async()=>{const {data}=await httpsCallable(functions,'betStartTest')();const u=new URL(data.url);if(u.protocol!=='https:'||u.hostname!=='www.mercadopago.com.br')throw Error('Checkout inválido.');location.assign(u.href)});
+el('sync').onclick=()=>run(async()=>describe((await httpsCallable(functions,'betSyncTest')()).data));
+el('cancel').onclick=()=>{if(confirm('Cancelar somente a assinatura de teste?'))run(async()=>describe((await httpsCallable(functions,'betCancelTest')()).data))};
+el('exit').onclick=()=>run(()=>signOut(auth));
+</script></html>
