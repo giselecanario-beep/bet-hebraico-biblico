@@ -7,6 +7,10 @@ const {getFirestore,Timestamp,FieldValue}=require("firebase-admin/firestore");
 const {addMonth,verifySubscription,evaluateAccess}=require("./bet-access-policy");
 const {webhookVerdict}=require("./bet-webhook-signature");
 const {eventMatches}=require("./bet-payment-events");
+const {createCheckoutService,CONSENT_VERSION}=require("./bet-checkout-service");
+const {createCheckoutStore}=require("./bet-checkout-store");
+const {createTestProvider}=require("./bet-checkout-provider");
+const checkoutConfig=defineSecret("BET_MP_CHECKOUT_CONFIG");
 const webhookSecret=defineSecret("MP_TEST_WEBHOOK_SECRET");
 const token=defineSecret("MP_TEST_ACCESS_TOKEN"), config=defineSecret("BET_MP_TEST_CONFIG");
 if(!getApps().length)initializeApp();
@@ -29,7 +33,7 @@ async function checkProvider(cfg){
 }
 async function getSubscription(cfg){
  const sub=await mp("/preapproval/"+encodeURIComponent(cfg.subscriptionId));
- try{verifySubscription(sub,cfg);}catch{throw new HttpsError("failed-precondition","Dados da assinatura não conferem com o teste autorizado.");}
+ try{verifySubscription(sub,cfg);if(cfg.reference&&(sub.external_reference!==cfg.reference||String(sub.application_id)!==String(cfg.applicationId)))throw Error("binding mismatch");}catch{throw new HttpsError("failed-precondition","Dados da assinatura não conferem com o teste autorizado.");}
  return sub;
 }
 async function invoices(cfg,now){
@@ -48,9 +52,9 @@ async function invoices(cfg,now){
  }
  throw new HttpsError("unavailable","Histórico de faturas requer conferência.");
 }
-function protect(snap){
+function protect(snap,source="mercadopago-test"){
  const d=snap.data();
- if(snap.exists&&(d?.source!=="mercadopago-test"||["owner","collaborator"].includes(d?.role)))throw new HttpsError("failed-precondition","Uma autorização de outro tipo está protegida.");
+ if(snap.exists&&(d?.source!==source||["owner","collaborator"].includes(d?.role)))throw new HttpsError("failed-precondition","Uma autorização de outro tipo está protegida.");
 }
 exports.betTestSubscription=onCall({region:"us-central1",secrets:[token,config],maxInstances:1,minInstances:0,concurrency:1,memory:"256MiB",timeoutSeconds:90,cors:[/^https:\/\/bet-hebraico--[a-z0-9-]+\.web\.app$/]},async req=>{
  if(!req.auth)throw new HttpsError("unauthenticated","Entre no BET.");
@@ -80,16 +84,16 @@ async function reconcile(cfg,sub,apply){
   const db=getFirestore(),ref=db.collection("betEntitlements").doc(cfg.uid);
   const version=Number.isSafeInteger(sub.version)?sub.version:null;
   await db.runTransaction(async tx=>{
-   const snap=await tx.get(ref);protect(snap);
+   const snap=await tx.get(ref);protect(snap,cfg.reference?"mercadopago-test-individual":"mercadopago-test");
    const old=snap.data()||{},oldVersion=old.providerVersion;
    if(Number.isSafeInteger(oldVersion)&&Number.isSafeInteger(version)&&oldVersion>version)return;
    if(old.checkedAt?.toMillis()>now&&(!Number.isSafeInteger(version)||!Number.isSafeInteger(oldVersion)||oldVersion>=version))return;
-   tx.set(ref,{role:"subscriber",active:result.active,validUntil:Timestamp.fromMillis(result.until),source:"mercadopago-test",subscriptionStatus:sub.status,accessReason:result.reason,providerVersion:version,checkedAt:Timestamp.fromMillis(now),updatedAt:FieldValue.serverTimestamp()},{merge:true});
+   tx.set(ref,{role:"subscriber",active:result.active,validUntil:Timestamp.fromMillis(result.until),source:cfg.reference?"mercadopago-test-individual":"mercadopago-test",subscriptionStatus:sub.status,accessReason:result.reason,providerVersion:version,checkedAt:Timestamp.fromMillis(now),updatedAt:FieldValue.serverTimestamp()},{merge:true});
   });
  }
  return {status:sub.status,active:result.active,reason:result.reason,trialActive:result.active,validUntil:new Date(result.until).toISOString(),applied:apply,cancelled:["cancelled","canceled"].includes(sub.status)};
 }
-exports.betTestWebhook=onRequest({region:"us-central1",secrets:[token,config,webhookSecret],maxInstances:1,minInstances:0,concurrency:1,memory:"256MiB",timeoutSeconds:90,cors:false},async(req,res)=>{
+exports.betTestWebhook=onRequest({region:"us-central1",secrets:[token,config,webhookSecret,checkoutConfig],maxInstances:1,minInstances:0,concurrency:1,memory:"256MiB",timeoutSeconds:90,cors:false},async(req,res)=>{
  if(req.method!=="POST"){res.status(405).end();return;}
  const ids=new URL(req.originalUrl||req.url,"https://bet.invalid").searchParams.getAll("data.id");
  const id=ids.length===1?ids[0]:undefined,type=req.body?.type;
@@ -102,12 +106,61 @@ exports.betTestWebhook=onRequest({region:"us-central1",secrets:[token,config,web
  if(!["subscription_preapproval","subscription_authorized_payment","payment","payments"].includes(type)){res.status(200).end();return;}
  try{
   const cfg=configuration();
-  if(type==="subscription_preapproval"&&id.toLowerCase()!==cfg.subscriptionId.toLowerCase()){res.status(200).end();return;}
   await checkProvider(cfg);
-  if(!await eventMatches(type,id,cfg,mp)){res.status(200).end();return;}
-  const sub=await getSubscription(cfg);
-  await reconcile(cfg,sub,true);
+  const offer=individualOffer(cfg);
+  const individual=await individualBinding(offer);
+  const choices=[cfg,...(individual?[individual]:[])];
+  let matched=null;
+  for(const candidate of choices){
+   if(await eventMatches(type,id,candidate,mp)){if(matched)throw Error("ambiguous event");matched=candidate;}
+  }
+  if(!matched){res.status(200).end();return;}
+  const sub=await getSubscription(matched);
+  await reconcile(matched,sub,true);
   res.set("X-BET-Result","reconciled");
   res.status(200).end();
  }catch(e){console.error("BET test webhook reconciliation failed",e?.code||"internal");res.status(503).end();}
+});
+
+function individualOffer(legacy){
+ let o;
+ try{o=JSON.parse(checkoutConfig.value());}catch{throw new HttpsError("failed-precondition","Checkout de teste não configurado.");}
+ if(o.enabled!==true||o.environment!=="test"||o.allowedUid===legacy.uid||String(o.payerId)===String(legacy.payerId)||String(o.payerId)===String(legacy.sellerId)||String(o.sellerId)!==String(legacy.sellerId)||o.planId!==legacy.planId||!/^\d+$/.test(String(o.applicationId))||!/^\d+$/.test(String(o.payerId))||!/^[-\w]{10,128}$/.test(o.allowedUid||"")||!/^APP_USR-[a-f0-9-]{36}$/i.test(o.publicKey||"")||!/@testuser\.com$/i.test(o.payerEmail||"")||typeof o.betEmail!=="string")throw new HttpsError("failed-precondition","Configuração do comprador fictício inválida.");
+ return o;
+}
+async function individualBinding(offer){
+ const db=getFirestore(),intent=await db.collection("betCheckoutIntents").doc(offer.allowedUid).get(),i=intent.data();
+ if(!intent.exists||i.state!=="bound")return null;
+ const lock=await db.collection("betCheckoutSubscriptionLocks").doc(i.subscriptionId).get(),b=lock.data();
+ if(!lock.exists||b.uid!==offer.allowedUid||b.reference!==i.reference||b.subscriptionId!==i.subscriptionId||b.environment!=="test"||String(b.sellerId)!==String(offer.sellerId)||String(b.payerId)!==String(offer.payerId)||String(b.applicationId)!==String(offer.applicationId)||b.planId!==offer.planId)throw Error("binding mismatch");
+ return b;
+}
+exports.betTestCheckout=onCall({region:"us-central1",secrets:[token,config,checkoutConfig],maxInstances:1,minInstances:0,concurrency:1,memory:"256MiB",timeoutSeconds:90,cors:[/^https:\/\/bet-hebraico--[a-z0-9-]+\.web\.app$/]},async req=>{
+ if(!req.auth)throw new HttpsError("unauthenticated","Entre no BET.");
+ const legacy=configuration(),offer=individualOffer(legacy);
+ const auth={uid:req.auth.uid,email:req.auth.token.email,email_verified:req.auth.token.email_verified};
+ if(auth.uid!==offer.allowedUid||auth.email?.toLowerCase()!==offer.betEmail.toLowerCase())throw new HttpsError("permission-denied","Conta não autorizada para o checkout fictício.");
+ const action=req.data?.action;
+ if(action==="setup")return {verified:auth.email_verified===true,publicKey:offer.publicKey,payerEmail:offer.payerEmail,consentVersion:CONSENT_VERSION};
+ if(auth.email_verified!==true)throw new HttpsError("failed-precondition","Confirme seu e-mail antes de contratar.");
+ const db=getFirestore(),store=createCheckoutStore(db,{Timestamp,FieldValue}),provider=createTestProvider({token:token.value()});
+ const service=createCheckoutService({store,provider,offer});
+ try{
+  if(action==="create")return await service.checkout(auth,{consent:req.data?.consent,consentVersion:req.data?.consentVersion,cardToken:req.data?.cardToken});
+  if(action==="recover")return await service.recover(auth);
+  if(!["status","cancel"].includes(action))throw new HttpsError("invalid-argument","Ação inválida.");
+  const b=await individualBinding(offer);
+  if(!b){const i=await store.read(auth.uid);return {state:i?.state||"none"};}
+  await checkProvider(b);
+  let sub=await getSubscription(b);
+  if(action==="cancel"){
+   if(req.data?.confirm!==true)throw new HttpsError("invalid-argument","Confirme o cancelamento.");
+   if(!["canceled","cancelled"].includes(sub.status)){
+    await mp("/preapproval/"+encodeURIComponent(b.subscriptionId),{status:"canceled"});
+    sub=await getSubscription(b);
+    if(!["canceled","cancelled"].includes(sub.status))throw new HttpsError("unavailable","Cancelamento ainda não confirmado.");
+   }
+  }
+  return {state:"bound",...await reconcile(b,sub,true)};
+ }catch(e){if(e instanceof HttpsError)throw e;console.warn("BET checkout operation not confirmed");throw new HttpsError("failed-precondition","Não foi possível confirmar a operação. Consulte a assinatura antes de tentar novamente.");}
 });
