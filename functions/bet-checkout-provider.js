@@ -14,12 +14,12 @@ function createTestProvider({token,fetchImpl=fetch}){
   if(p.id!==o.planId||String(p.collector_id)!==String(o.sellerId)||String(p.application_id)!==String(o.applicationId)||p.status!=="active"||r.frequency!==1||r.frequency_type!=="months"||r.currency_id!=="BRL"||Math.round(Number(r.transaction_amount)*100)!==1990||r.free_trial?.frequency!==7||r.free_trial?.frequency_type!=="days")throw Error("offer-mismatch");
  }
  // Offer verification must be invoked by the service before creation.
- async function findByReference(reference){
-  if(!/^bet_[a-f0-9]{48}$/.test(reference))throw Error("invalid-reference");
+ async function findByReference(reference,offer){
+  if(!/^bet_[a-f0-9]{48}$/.test(reference)||!/^\d+$/.test(String(offer?.payerId))||!/^[a-f0-9]{32}$/i.test(offer?.planId||""))throw Error("invalid-reference");
   const matches=[];
   // Refuse partial or ambiguous results instead of risking duplicate subscriptions.
   for(let offset=0;offset<250;offset+=50){
-   const p=await request("/preapproval/search?external_reference="+encodeURIComponent(reference)+"&limit=50&offset="+offset);
+   const p=await request("/preapproval/search?payer_id="+encodeURIComponent(offer.payerId)+"&preapproval_plan_id="+encodeURIComponent(offer.planId)+"&limit=50&offset="+offset);
    const total=Number(p.paging?.total);
    if(!Array.isArray(p.results)||!Number.isSafeInteger(total)||total<0||Number(p.paging?.offset)!==offset)throw Error("invalid-search");
    for(const row of p.results)if(row.external_reference===reference)matches.push({id:row.id});
