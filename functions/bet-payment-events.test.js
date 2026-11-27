@@ -1,0 +1,23 @@
+"use strict";
+const assert=require("node:assert/strict");
+const {eventMatches}=require("./bet-payment-events");
+const cfg={subscriptionId:"abc",sellerId:"12"};
+const invoice={id:55,preapproval_id:"abc",payment:{id:99}};
+const payment={id:99,collector_id:12,status:"refunded"};
+const mp=async path=>path.startsWith("/v1/payments/")?payment:path.startsWith("/authorized_payments/search?")?{results:[invoice]}:invoice;
+(async()=>{
+ assert.equal(await eventMatches("subscription_preapproval","abc",cfg,mp),true);
+ assert.equal(await eventMatches("subscription_preapproval","other",cfg,mp),false);
+ assert.equal(await eventMatches("subscription_authorized_payment","55",cfg,mp),true);
+ assert.equal(await eventMatches("subscription_authorized_payment","56",cfg,mp),false);
+ assert.equal(await eventMatches("payment","99",cfg,mp),true);
+ assert.equal(await eventMatches("payments","99",cfg,mp),true);
+ assert.equal(await eventMatches("payment","100",cfg,mp),false);
+ assert.equal(await eventMatches("payment","99",cfg,async p=>p.startsWith("/v1/")?{...payment,collector_id:13}:{results:[invoice]}),false);
+ assert.equal(await eventMatches("payment","99",cfg,async p=>p.startsWith("/v1/")?payment:{results:[{...invoice,preapproval_id:"other"}]}),false);
+ assert.equal(await eventMatches("payment","99",cfg,async p=>p.startsWith("/v1/")?payment:{results:[{...invoice,payment:{id:100}}]}),false);
+ assert.equal(await eventMatches("payment","bad/id",cfg,mp),false);
+ assert.equal(await eventMatches("subscription_preapproval_plan","abc",cfg,mp),false);
+ await assert.rejects(()=>eventMatches("payment","99",cfg,async p=>p.startsWith("/v1/")?payment:{}));
+ console.log("13 testes de eventos aprovados");
+})().catch(e=>{console.error(e);process.exitCode=1;});
