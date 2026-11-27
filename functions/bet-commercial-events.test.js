@@ -1,0 +1,44 @@
+"use strict";
+const assert=require("node:assert/strict");
+const {createHmac}=require("node:crypto");
+const {createCommercialEvents,createCommercialWebhook}=require("./bet-commercial-events");
+const now=Date.parse("2026-11-27T15:00:00Z"),secret="fictional-secret-only-for-unit-tests";
+const sub="a".repeat(32),other="b".repeat(32),plan="c".repeat(32);
+const offer={environment:"production",salesEnabled:false,sellerId:"1",applicationId:"3",planId:plan,priceCents:1990,currency:"BRL",trialDays:7,interval:"monthly"};
+const b={subscriptionId:sub,payerId:"2",sellerId:"1",applicationId:"3",planId:plan};
+(async()=>{
+ const reconciled=[];
+ let pay={id:99,collector_id:1,payer:{id:2}},invoice={id:55,preapproval_id:sub},rows=[{preapproval_id:sub,payment:{id:99}}],binding=b,fail=false;
+ const provider={verifySeller:async()=>{},invoice:async()=>invoice,payment:async()=>pay,invoices:async()=>rows};
+ const store={payerBinding:async()=>binding};
+ const service={reconcileEvent:async id=>{if(fail)throw Error("offline");reconciled.push(id);return {state:id===other?"ignored":"bound"};}};
+ const events=createCommercialEvents({provider,store,service,offer});
+ const receive=createCommercialWebhook({events,offer,secret,clock:()=>now});
+ function req(type,id,patch={}){
+  const ts=String(now),requestId="bet-unit-test";
+  const signature="ts="+ts+",v1="+createHmac("sha256",secret).update("id:"+id.toLowerCase()+";request-id:"+requestId+";ts:"+ts+";").digest("hex");
+  return {method:"POST",url:"/?data.id="+id,requestId,signature,body:{type,data:{id},live_mode:true,user_id:1},...patch};
+ }
+ assert.equal((await receive(req("payment","99"))).state,"reconciled");
+ assert.equal(reconciled.at(-1),sub);
+ assert.equal((await receive(req("subscription_authorized_payment","55"))).state,"reconciled");
+ assert.equal((await receive(req("subscription_preapproval",sub))).http,200);
+ assert.equal((await receive(req("subscription_preapproval",other))).state,"ignored");
+ const n=reconciled.length;
+ assert.equal((await receive(req("payment","99",{signature:"invalid"}))).http,401);
+ assert.equal((await receive(req("payment","99",{method:"GET"}))).http,405);
+ assert.equal((await receive(req("payment","99",{url:"/?data.id=99&data.id=99"}))).http,401);
+ assert.equal((await receive(req("payment","99",{body:{type:"payment",data:{id:"100"}}}))).http,400);
+ assert.equal((await receive(req("payment","99",{body:{type:"payment",data:{id:"99"},live_mode:false}}))).state,"ignored");
+ assert.equal((await receive(req("payment","99",{body:{type:"payment",data:{id:"99"},user_id:8}}))).state,"ignored");
+ assert.equal((await receive(req("subscription_preapproval_plan",plan))).state,"ignored");
+ pay={...pay,collector_id:8};assert.equal((await receive(req("payment","99"))).state,"ignored");
+ pay={...pay,collector_id:1};binding=null;assert.equal((await receive(req("payment","99"))).state,"ignored");
+ binding=b;rows=[{preapproval_id:other,payment:{id:99}}];assert.equal((await receive(req("payment","99"))).state,"ignored");
+ rows=[{preapproval_id:sub,payment:{id:98}}];assert.equal((await receive(req("payment","99"))).state,"ignored");
+ rows=[{preapproval_id:sub,payment:{id:99}},{preapproval_id:sub,payment:{id:99}}];assert.equal((await receive(req("payment","99"))).http,503);
+ invoice={...invoice,id:56};assert.equal((await receive(req("subscription_authorized_payment","55"))).http,503);
+ fail=true;assert.equal((await receive(req("subscription_preapproval",sub))).http,503);
+ assert.equal(reconciled.length,n);
+ console.log("20 verificacoes de eventos comerciais aprovadas (sem rede).");
+})().catch(e=>{console.error(e);process.exitCode=1;});
