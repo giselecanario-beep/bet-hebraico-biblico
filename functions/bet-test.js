@@ -107,6 +107,7 @@ exports.betTestWebhook=onRequest({region:"us-central1",secrets:[token,config,web
   if(!await eventMatches(type,id,cfg,mp)){res.status(200).end();return;}
   const sub=await getSubscription(cfg);
   await reconcile(cfg,sub,true);
+  res.set("X-BET-Result","reconciled");
   res.status(200).end();
  }catch(e){console.error("BET test webhook reconciliation failed",e?.code||"internal");res.status(503).end();}
 });
