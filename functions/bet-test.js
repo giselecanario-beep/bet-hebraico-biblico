@@ -5,7 +5,7 @@ const {defineSecret}=require("firebase-functions/params");
 const {initializeApp,getApps}=require("firebase-admin/app");
 const {getFirestore,Timestamp,FieldValue}=require("firebase-admin/firestore");
 const {addMonth,verifySubscription,evaluateAccess}=require("./bet-access-policy");
-const {verifyWebhook}=require("./bet-webhook-signature");
+const {webhookVerdict}=require("./bet-webhook-signature");
 const webhookSecret=defineSecret("MP_TEST_WEBHOOK_SECRET");
 const token=defineSecret("MP_TEST_ACCESS_TOKEN"), config=defineSecret("BET_MP_TEST_CONFIG");
 if(!getApps().length)initializeApp();
@@ -90,8 +90,12 @@ async function reconcile(cfg,sub,apply){
 }
 exports.betTestWebhook=onRequest({region:"us-central1",secrets:[token,config,webhookSecret],maxInstances:1,minInstances:0,concurrency:1,memory:"256MiB",timeoutSeconds:90,cors:false},async(req,res)=>{
  if(req.method!=="POST"){res.status(405).end();return;}
- const id=req.query["data.id"],type=req.body?.type;
- if(!verifyWebhook({id,requestId:req.get("x-request-id"),signature:req.get("x-signature"),secret:webhookSecret.value(),now:Date.now()})){res.status(401).end();return;}
+ const ids=new URL(req.originalUrl||req.url,"https://bet.invalid").searchParams.getAll("data.id");
+ const id=ids.length===1?ids[0]:undefined,type=req.body?.type;
+ res.set("X-BET-Webhook","diagnostic-v2");
+ const verdict=webhookVerdict({id,requestId:req.get("x-request-id"),signature:req.get("x-signature"),secret:webhookSecret.value(),now:Date.now()});
+ if(verdict!=="ok"){console.warn("BET_WEBHOOK_DIAG "+verdict);res.status(401).end();return;}
+ console.info("BET_WEBHOOK_DIAG signature-ok");
  if(String(req.body?.data?.id).toLowerCase()!==id.toLowerCase()){res.status(400).end();return;}
  if(!["subscription_preapproval","subscription_authorized_payment"].includes(type)){res.status(200).end();return;}
  try{
