@@ -1,6 +1,7 @@
 "use strict";
 // Adapter for future production integration. No network call occurs on construction.
 const {validateOffer}=require("./bet-commercial-core");
+const {listInvoices}=require("./bet-invoice-pages");
 function createCommercialProvider({token,offer,fetchImpl=fetch}){
  const o=validateOffer(offer);
  if(typeof token!=="string"||!token.startsWith("APP_USR-")||token.length<30)throw Error("invalid-production-credential");
@@ -10,11 +11,14 @@ function createCommercialProvider({token,offer,fetchImpl=fetch}){
   return r.json();
  }
  const get=id=>{if(!/^[a-f0-9]{32}$/i.test(id))throw Error("invalid-subscription-id");return request("GET","/preapproval/"+id);};
+ async function verifySeller(){
+  const me=await request("GET","/users/me");
+  if(String(me.id)!==o.sellerId||typeof me.nickname!=="string"||!me.nickname||/^TESTUSER/i.test(me.nickname))throw Error("not-commercial-seller");
+ }
  async function verifyOffer(candidate){
   const c=validateOffer(candidate);
   if(c.sellerId!==o.sellerId||c.planId!==o.planId||c.applicationId!==o.applicationId)throw Error("offer-mismatch");
-  const me=await request("GET","/users/me");
-  if(String(me.id)!==o.sellerId||typeof me.nickname!=="string"||!me.nickname||/^TESTUSER/i.test(me.nickname))throw Error("not-commercial-seller");
+  await verifySeller();
   const p=await request("GET","/preapproval_plan/"+o.planId),r=p.auto_recurring||{};
   if(p.id!==o.planId||String(p.collector_id)!==o.sellerId||String(p.application_id)!==o.applicationId||p.status!=="active"||r.frequency!==1||r.frequency_type!=="months"||r.currency_id!=="BRL"||Math.round(Number(r.transaction_amount)*100)!==1990||r.free_trial?.frequency!==7||r.free_trial?.frequency_type!=="days")throw Error("plan-mismatch");
  }
@@ -43,6 +47,14 @@ function createCommercialProvider({token,offer,fetchImpl=fetch}){
   if(!/^[a-f0-9]{32}$/i.test(id))throw Error("invalid-subscription-id");
   return request("PUT","/preapproval/"+id,{status:"cancelled"});
  }
- return {verifyOffer,findByEmail,create,get,cancel};
+ async function invoices(id){
+  if(!/^[a-f0-9]{32}$/i.test(id))throw Error("invalid-subscription-id");
+  return listInvoices(path=>request("GET",path),id);
+ }
+ async function payment(id){
+  if(!/^\d{1,25}$/.test(String(id)))throw Error("invalid-payment-id");
+  return request("GET","/v1/payments/"+encodeURIComponent(String(id)));
+ }
+ return {verifySeller,verifyOffer,findByEmail,create,get,cancel,invoices,payment};
 }
 module.exports={createCommercialProvider};
