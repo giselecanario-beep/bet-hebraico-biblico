@@ -87,6 +87,6 @@ function fixture(){
  await adapter.cancel("c".repeat(32));
  assert.equal(JSON.parse(calls.at(-1).body).status,"cancelled");
  assert.equal(calls.at(-1).method,"PUT");
- assert.throws(()=>createCommercialProvider({token:"TEST-"+ "x".repeat(40),offer:o}),/invalid-production-credential/);
+ assert.throws(()=>createCommercialProvider({token:"TEST-"+ "x".repeat(40),offer:o,fetchImpl:async()=>{throw Error("unexpected network");}}),/invalid-production-credential/);
  console.log("Testes do nucleo comercial aprovados (simulados, sem pagamentos reais).");
 })().catch(e=>{console.error(e);process.exitCode=1;});
