@@ -2,7 +2,7 @@
 // Offline commercial core. NOT exported as a Cloud Function. No production secrets.
 // Never trust UID, email, price, plan, seller or reference from browser input.
 const {randomBytes,createHash}=require("node:crypto");
-const {evaluateAccess}=require("./bet-access-policy");
+const {evaluateAccess,addMonth}=require("./bet-access-policy");
 const CONSENT_VERSION="bet-brl1990-monthly-trial7-v1";
 const idOK=v=>typeof v==="string"&&/^[a-f0-9]{32}$/i.test(v);
 const numeric=v=>/^\d{1,25}$/.test(String(v??""));
@@ -90,6 +90,53 @@ function createCommercialService({store,provider,offer,clock=Date.now,reference=
   if(sub.id!==matches[0].id)throw Error("provider-id-mismatch");
   return bind(i,sub);
  }
- return {checkout,recover};
+ async function managementContext(auth){
+  const u=userIdentity(auth),i=await store.read(u.uid);
+  if(!i)return null;
+  sameIntent(i,u,o);
+  if(i.state!=="bound")throw Error("subscription-not-bound");
+  const b=await store.readBinding(i);
+  await provider.verifySeller();
+  const sub=await provider.get(b.subscriptionId);
+  const checked=confirmSubscription(i,sub,clock());
+  if(checked.subscriptionId!==b.subscriptionId||checked.payerId!==b.payerId)throw Error("binding-mismatch");
+  return {i,b,sub};
+ }
+ async function reconcileAccess(i,b,sub){
+  const now=clock();
+  let access=evaluateAccess(sub,b,now);
+  if(access.reason!=="trial"&&["authorized","paused","cancelled","canceled"].includes(sub.status)&&now>=Date.parse(sub.date_created)+6*86400000){
+   const rows=await provider.invoices(b.subscriptionId),pairs=[];
+   for(const row of rows){
+    const due=Date.parse(row.debit_date);
+    if(row.payment?.status!=="approved"||!/^\d+$/.test(String(row.payment?.id))||!Number.isFinite(due)||due>now||addMonth(due)<=now)continue;
+    pairs.push({invoice:row,payment:await provider.payment(row.payment.id)});
+    if(pairs.length>5)throw Error("ambiguous-invoices");
+   }
+   access=evaluateAccess(sub,b,now,pairs);
+  }
+  const result=await store.reconcile(i,b,access,sub,now);
+  if(result.stale)throw Error("stale-provider-result");
+  return {state:"bound",status:sub.status,active:result.active,reason:result.reason,validUntil:new Date(result.until).toISOString(),cancelled:["cancelled","canceled"].includes(sub.status)};
+ }
+ async function status(auth){
+  const c=await managementContext(auth);
+  if(!c)return {state:"none"};
+  return reconcileAccess(c.i,c.b,c.sub);
+ }
+ async function cancel(auth,input){
+  if(input?.confirm!==true)throw Error("confirmation-required");
+  const c=await managementContext(auth);
+  if(!c)throw Error("subscription-not-found");
+  const before=await reconcileAccess(c.i,c.b,c.sub);
+  if(before.cancelled)return before;
+  if(!["authorized","paused","pending"].includes(c.sub.status))throw Error("invalid-cancellation-state");
+  // No client-chosen subscription ID. One PUT, then independent GET. No automatic retry.
+  await provider.cancel(c.b.subscriptionId);
+  const sub=await provider.get(c.b.subscriptionId),checked=confirmSubscription(c.i,sub,clock());
+  if(checked.payerId!==c.b.payerId||checked.subscriptionId!==c.b.subscriptionId||!["cancelled","canceled"].includes(sub.status))throw Error("cancellation-unconfirmed");
+  return reconcileAccess(c.i,c.b,sub);
+ }
+ return {checkout,recover,status,cancel};
 }
 module.exports={CONSENT_VERSION,userIdentity,validateOffer,makeIntent,sameIntent,confirmSubscription,payload,createCommercialService};
