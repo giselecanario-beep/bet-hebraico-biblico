@@ -6,6 +6,7 @@ const {initializeApp,getApps}=require("firebase-admin/app");
 const {getFirestore,Timestamp,FieldValue}=require("firebase-admin/firestore");
 const {addMonth,verifySubscription,evaluateAccess}=require("./bet-access-policy");
 const {webhookVerdict}=require("./bet-webhook-signature");
+const {eventMatches}=require("./bet-payment-events");
 const webhookSecret=defineSecret("MP_TEST_WEBHOOK_SECRET");
 const token=defineSecret("MP_TEST_ACCESS_TOKEN"), config=defineSecret("BET_MP_TEST_CONFIG");
 if(!getApps().length)initializeApp();
@@ -98,16 +99,12 @@ exports.betTestWebhook=onRequest({region:"us-central1",secrets:[token,config,web
  if(verdict!=="ok"){console.warn("BET_WEBHOOK_DIAG "+verdict);res.status(401).end();return;}
  console.info("BET_WEBHOOK_DIAG signature-ok");
  if(String(req.body?.data?.id).toLowerCase()!==id.toLowerCase()){res.status(400).end();return;}
- if(!["subscription_preapproval","subscription_authorized_payment"].includes(type)){res.status(200).end();return;}
+ if(!["subscription_preapproval","subscription_authorized_payment","payment","payments"].includes(type)){res.status(200).end();return;}
  try{
   const cfg=configuration();
   if(type==="subscription_preapproval"&&id.toLowerCase()!==cfg.subscriptionId.toLowerCase()){res.status(200).end();return;}
-  if(type==="subscription_authorized_payment"&&!/^[0-9]{1,25}$/.test(id)){res.status(400).end();return;}
   await checkProvider(cfg);
-  if(type==="subscription_authorized_payment"){
-   const invoice=await mp("/authorized_payments/"+encodeURIComponent(id));
-   if(String(invoice.id)!==id||invoice.preapproval_id!==cfg.subscriptionId){res.status(200).end();return;}
-  }
+  if(!await eventMatches(type,id,cfg,mp)){res.status(200).end();return;}
   const sub=await getSubscription(cfg);
   await reconcile(cfg,sub,true);
   res.status(200).end();
