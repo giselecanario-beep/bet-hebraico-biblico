@@ -1,10 +1,12 @@
 "use strict";
 // Restricted integration for the existing fictional seller, buyer and BET test account.
-const {onCall,HttpsError}=require("firebase-functions/v2/https");
+const {onCall,onRequest,HttpsError}=require("firebase-functions/v2/https");
 const {defineSecret}=require("firebase-functions/params");
 const {initializeApp,getApps}=require("firebase-admin/app");
 const {getFirestore,Timestamp,FieldValue}=require("firebase-admin/firestore");
 const {addMonth,verifySubscription,evaluateAccess}=require("./bet-access-policy");
+const {verifyWebhook}=require("./bet-webhook-signature");
+const webhookSecret=defineSecret("MP_TEST_WEBHOOK_SECRET");
 const token=defineSecret("MP_TEST_ACCESS_TOKEN"), config=defineSecret("BET_MP_TEST_CONFIG");
 if(!getApps().length)initializeApp();
 async function mp(path,body){
@@ -65,17 +67,44 @@ exports.betTestSubscription=onCall({region:"us-central1",secrets:[token,config],
   sub=await getSubscription(cfg);
   if(!["cancelled","canceled"].includes(sub.status))throw new HttpsError("unavailable","Cancelamento ainda não confirmado. Consulte novamente.");
  }
+ return reconcile(cfg,sub,action!=="check");
+});
+async function reconcile(cfg,sub,apply){
  const now=Date.now(),initial=evaluateAccess(sub,cfg,now);
  let result=initial;
- // No paid time is granted solely because the recurring subscription is authorized.
  if(initial.reason!=="trial"&&["authorized","cancelled","canceled","paused"].includes(sub.status)&&now>=Date.parse(sub.date_created)+7*86400000-86400000){
   result=evaluateAccess(sub,cfg,now,await invoices(cfg,now));
  }
- if(action!=="check"){
+ if(apply){
+  const db=getFirestore(),ref=db.collection("betEntitlements").doc(cfg.uid);
+  const version=Number.isSafeInteger(sub.version)?sub.version:null;
   await db.runTransaction(async tx=>{
-   protect(await tx.get(ref));
-   tx.set(ref,{role:"subscriber",active:result.active,validUntil:Timestamp.fromMillis(result.until),source:"mercadopago-test",subscriptionStatus:sub.status,accessReason:result.reason,updatedAt:FieldValue.serverTimestamp()},{merge:true});
+   const snap=await tx.get(ref);protect(snap);
+   const old=snap.data()||{},oldVersion=old.providerVersion;
+   if(Number.isSafeInteger(oldVersion)&&Number.isSafeInteger(version)&&oldVersion>version)return;
+   if(old.checkedAt?.toMillis()>now&&(!Number.isSafeInteger(version)||!Number.isSafeInteger(oldVersion)||oldVersion>=version))return;
+   tx.set(ref,{role:"subscriber",active:result.active,validUntil:Timestamp.fromMillis(result.until),source:"mercadopago-test",subscriptionStatus:sub.status,accessReason:result.reason,providerVersion:version,checkedAt:Timestamp.fromMillis(now),updatedAt:FieldValue.serverTimestamp()},{merge:true});
   });
  }
- return {status:sub.status,active:result.active,reason:result.reason,trialActive:result.active,validUntil:new Date(result.until).toISOString(),applied:action!=="check",cancelled:["cancelled","canceled"].includes(sub.status)};
+ return {status:sub.status,active:result.active,reason:result.reason,trialActive:result.active,validUntil:new Date(result.until).toISOString(),applied:apply,cancelled:["cancelled","canceled"].includes(sub.status)};
+}
+exports.betTestWebhook=onRequest({region:"us-central1",secrets:[token,config,webhookSecret],maxInstances:1,minInstances:0,concurrency:1,memory:"256MiB",timeoutSeconds:90,cors:false},async(req,res)=>{
+ if(req.method!=="POST"){res.status(405).end();return;}
+ const id=req.query["data.id"],type=req.body?.type;
+ if(!verifyWebhook({id,requestId:req.get("x-request-id"),signature:req.get("x-signature"),secret:webhookSecret.value(),now:Date.now()})){res.status(401).end();return;}
+ if(String(req.body?.data?.id).toLowerCase()!==id.toLowerCase()){res.status(400).end();return;}
+ if(!["subscription_preapproval","subscription_authorized_payment"].includes(type)){res.status(200).end();return;}
+ try{
+  const cfg=configuration();
+  if(type==="subscription_preapproval"&&id.toLowerCase()!==cfg.subscriptionId.toLowerCase()){res.status(200).end();return;}
+  if(type==="subscription_authorized_payment"&&!/^[0-9]{1,25}$/.test(id)){res.status(400).end();return;}
+  await checkProvider(cfg);
+  if(type==="subscription_authorized_payment"){
+   const invoice=await mp("/authorized_payments/"+encodeURIComponent(id));
+   if(String(invoice.id)!==id||invoice.preapproval_id!==cfg.subscriptionId){res.status(200).end();return;}
+  }
+  const sub=await getSubscription(cfg);
+  await reconcile(cfg,sub,true);
+  res.status(200).end();
+ }catch(e){console.error("BET test webhook reconciliation failed",e?.code||"internal");res.status(503).end();}
 });
