@@ -42,6 +42,24 @@ function createCommercialStore(db,{Timestamp,FieldValue}){
    tx.create(refs[5],{role:"subscriber",active:access.active,validUntil:Timestamp.fromMillis(access.until),accessReason:access.reason,source:"mercadopago-commercial",subscriptionId:b.subscriptionId,updatedAt:FieldValue.serverTimestamp()});
   });
  }
- return {read,reserve,markUncertain,bind};
+ async function readBinding(i){
+  if(i.state!=="bound"||!/^[a-f0-9]{32}$/i.test(i.subscriptionId||""))throw Error("unbound");
+  const snap=await subRef(i).get(),b=snap.data();
+  if(!owns(snap,i)||b.environment!=="production"||b.subscriptionId!==i.subscriptionId||b.emailKey!==i.emailKey||b.planId!==i.planId||b.sellerId!==i.sellerId||b.applicationId!==i.applicationId)throw Error("binding-lock-conflict");
+  return b;
+ }
+ async function reconcile(i,b,access,sub,now){
+  await db.runTransaction(async tx=>{
+   const refs=[uidRef(i.uid),emailRef(i),refRef(i),payerRef(b),subRef(b),entRef(i.uid)];
+   const [u,e,r,p,s,a]=await Promise.all(refs.map(x=>tx.get(x)));
+   if(![u,e,r,p,s].every(x=>owns(x,i)&&x.data().subscriptionId===b.subscriptionId)||!a.exists||a.data().source!=="mercadopago-commercial"||a.data().subscriptionId!==b.subscriptionId||a.data().role!=="subscriber")throw Error("protected-entitlement");
+   const old=a.data(),version=Number.isSafeInteger(sub.version)?sub.version:null;
+   if(Number.isSafeInteger(old.providerVersion)&&(!Number.isSafeInteger(version)||version<old.providerVersion))return {active:old.active,reason:old.accessReason,until:old.validUntil.toMillis(),stale:true};
+   if(old.checkedAt?.toMillis()>now)return {active:old.active,reason:old.accessReason,until:old.validUntil.toMillis(),stale:true};
+   tx.update(refs[5],{active:access.active,validUntil:Timestamp.fromMillis(access.until),accessReason:access.reason,subscriptionStatus:sub.status,providerVersion:version,checkedAt:Timestamp.fromMillis(now),updatedAt:FieldValue.serverTimestamp()});
+   return access;
+  });
+ }
+ return {read,reserve,markUncertain,bind,readBinding,reconcile};
 }
 module.exports={createCommercialStore};
