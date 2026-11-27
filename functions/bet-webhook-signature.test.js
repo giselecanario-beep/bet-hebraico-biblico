@@ -14,4 +14,6 @@ assert.equal(verifyWebhook({...base,signature:base.signature+",ts="+ts}),false);
 assert.equal(verifyWebhook({...base,now:now+86400001}),false);
 assert.equal(verifyWebhook({...base,now:now-300001}),false);
 assert.equal(verifyWebhook({...base,signature:sign(String(now))}),true);
-console.log("9 testes de assinatura webhook aprovados");
+assert.equal(verifyWebhook({...base,secret:" "+secret+"\r\n"}),true);
+assert.equal(verifyWebhook({...base,signature:base.signature.replace(/v1=./,"v1=z")}),false);
+console.log("11 testes de assinatura webhook aprovados");
