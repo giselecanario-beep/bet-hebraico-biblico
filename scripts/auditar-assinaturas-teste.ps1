@@ -3,6 +3,7 @@
 $ErrorActionPreference='Stop'
 $project='bet-hebraico'
 $phase='configuracao'
+$script:invoiceIncomplete=$false
 function Read-Secret([string]$name){
  $v=((firebase.cmd functions:secrets:access $name --project $project) -join '').Trim()
  if($LASTEXITCODE -ne 0 -or !$v){throw 'Secret unavailable'}
@@ -35,6 +36,7 @@ function Show-Subscription([string]$label,$sub,[string]$payer){
  Write-Host "  Criada (UTC): $($created.UtcDateTime.ToString('u'))"
  Write-Host "  Fim maximo do teste (UTC): $($trialEnd.UtcDateTime.ToString('u'))"
  if($sub.next_payment_date){Write-Host "  Proximo pagamento informado (UTC): $(([DateTimeOffset]::Parse($sub.next_payment_date)).UtcDateTime.ToString('u'))"}
+ try{
  $rows=@(Read-Pages "/authorized_payments/search?preapproval_id=$($sub.id)")
  $approved=0
  $now=[DateTimeOffset]::UtcNow
@@ -53,6 +55,13 @@ function Show-Subscription([string]$label,$sub,[string]$payer){
  Write-Host "  Pagamentos aprovados e conferidos: $approved"
  if($lastDue){Write-Host "  Ultimo vencimento confirmado (UTC): $($lastDue.UtcDateTime.ToString('u'))"}
  if($approved -eq 0){Write-Host '  Renovacao paga: ainda nao comprovada.'}
+ }catch{
+  $script:invoiceIncomplete=$true
+  $http=$null
+  try{$http=[int]$_.Exception.Response.StatusCode}catch{}
+  $reason=if($http){"HTTP $http"}elseif($_.Exception.Message -in @('Invalid pagination','Incomplete pagination','Search limit','Invoice mismatch')){$_.Exception.Message}else{'resposta nao validada'}
+  Write-Host "  Faturas: consulta inconclusiva ($reason). Continuando auditoria." -ForegroundColor Yellow
+ }
 }
 try{
  $legacy=Read-Secret 'BET_MP_TEST_CONFIG' | ConvertFrom-Json
@@ -95,10 +104,13 @@ try{
  $until=[DateTimeOffset]::Parse($f.validUntil.timestampValue)
  $active=$f.active.booleanValue -eq $true -and $until -gt [DateTimeOffset]::UtcNow
  Write-Host "FIREBASE: origem confirmada, acesso vigente=$active; motivo=$($f.accessReason.stringValue); ate (UTC)=$($until.UtcDateTime.ToString('u'))"
- Write-Host 'AUDITORIA CONCLUIDA - nenhuma assinatura alterada.' -ForegroundColor Green
+ if($script:invoiceIncomplete){Write-Host 'ASSINATURAS E ACESSO CONFERIDOS; FALTAM FATURAS. Nenhuma assinatura alterada.' -ForegroundColor Yellow}else{Write-Host 'AUDITORIA CONCLUIDA - nenhuma assinatura alterada.' -ForegroundColor Green}
  Write-Host 'O cancelamento e a renovacao real devem ser comprovados separadamente. Nao abra vendas com base apenas nesta auditoria.'
 }catch{
- Write-Host "AUDITORIA INCONCLUSIVA: etapa $phase. Nenhuma assinatura alterada. Nao repita contratacao." -ForegroundColor Yellow
+ $http=$null
+ try{$http=[int]$_.Exception.Response.StatusCode}catch{}
+ $reason=if($http){"HTTP $http"}elseif($_.Exception.Message -in @('Invalid pagination','Incomplete pagination','Search limit','Subscription absent or ambiguous','Binding mismatch','Entitlement source mismatch','Local account mismatch','Subscription mismatch')){$_.Exception.Message}else{'resposta nao validada'}
+ Write-Host "AUDITORIA INCONCLUSIVA: etapa $phase ($reason). Nenhuma assinatura alterada. Nao repita contratacao." -ForegroundColor Yellow
  # Never print exception bodies or credentials.
 }finally{
  Remove-Variable legacy,offer,headers,state,login,pw,access -ErrorAction SilentlyContinue
