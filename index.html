@@ -519,7 +519,7 @@ if(betTestPreview){
   const user=auth.currentUser,msg=document.getElementById('bet-test-message');
   if(!user||!msg||busy)return;
   if(action==='cancel'&&!confirm('Cancelar somente a assinatura fictícia? O período de teste gratuito será encerrado. Essa ação não cancela sua conta BET nem apaga seu progresso.'))return;
-  busy=true;const buttons=[...document.querySelectorAll('#bet-test-panel button')];
+  busy=true;const buttons=[...document.querySelectorAll('#bet-test-check,#bet-test-cancel')];
   buttons.forEach(b=>b.disabled=true);msg.textContent='Consultando o Mercado Pago…';
   try{
    const {getFunctions,httpsCallable}=await import('https://www.gstatic.com/firebasejs/13.4.0/firebase-functions.js');
@@ -535,23 +535,90 @@ if(betTestPreview){
    if(queuedUser&&auth.currentUser?.uid===queuedUser){queuedUser=null;void testCall('sync',true);}else queuedUser=null;
   }
  };
+
+ function setupIndividualCheckout(){
+  const $=id=>document.getElementById(id),section=$('bet-checkout-real'),form=$('bet-card-form'),msg=$('bet-checkout-status'),submit=$('bet-card-submit'),consent=$('bet-card-consent');
+  if(!section||!form)return;
+  let uid=null,epoch=0,setup=null,card=null,sdkPromise=null,busy=false,ready=false;
+  const call=async(action,extra={})=>{
+   const {getFunctions,httpsCallable}=await import('https://www.gstatic.com/firebasejs/13.4.0/firebase-functions.js');
+   return (await httpsCallable(getFunctions(app,'us-central1'),'betTestCheckout',{timeout:100000})({action,...extra})).data;
+  };
+  function clearCard(){try{card?.unmount?.();}catch{}card=null;ready=false;form.hidden=true;consent.checked=false;submit.disabled=true;}
+  function showState(data){
+   $('bet-checkout-recover').hidden=!['reserved','uncertain'].includes(data.state);
+   $('bet-checkout-cancel').hidden=data.state!=='bound'||data.cancelled===true;
+   if(data.state==='bound'){
+    clearCard();
+    msg.textContent=data.cancelled?'Cancelamento confirmado. Renovação interrompida.':data.active?'Acesso válido até '+new Date(data.validUntil).toLocaleString('pt-BR')+'.':'Assinatura vinculada; consulte o status do acesso.';
+    if(auth.currentUser?.uid===uid)void window.betConsultarAssinatura?.(auth.currentUser);
+   }else if(data.state!=='none'){
+    clearCard();msg.textContent='Contratação aguardando confirmação. Use Recuperar contratação pendente. Não tente contratar novamente.';
+   }
+  }
+  function loadSDK(){return sdkPromise||(sdkPromise=new Promise((resolve,reject)=>{
+   if(window.MercadoPago){resolve();return;}
+   const script=document.createElement('script');script.src='https://sdk.mercadopago.com/js/v2';script.onload=resolve;script.onerror=reject;document.head.appendChild(script);
+  }).catch(e=>{sdkPromise=null;throw e;}));}
+  async function mount(currentEpoch){
+   clearCard();
+   await loadSDK();if(currentEpoch!==epoch||!setup?.verified)return;
+   form.hidden=false;$('bet-card-email').value=setup.payerEmail;
+   const mp=new window.MercadoPago(setup.publicKey,{locale:'pt-BR'});
+   card=mp.cardForm({amount:'19.90',iframe:true,form:{id:'bet-card-form',cardNumber:{id:'bet-card-number',placeholder:'Número do cartão'},expirationDate:{id:'bet-card-expiration',placeholder:'MM/AA'},securityCode:{id:'bet-card-security',placeholder:'CVV'},cardholderName:{id:'bet-card-name'},issuer:{id:'bet-card-issuer'},installments:{id:'bet-card-installments'},identificationType:{id:'bet-card-doc-type'},identificationNumber:{id:'bet-card-doc'},cardholderEmail:{id:'bet-card-email'}},callbacks:{
+    onFormMounted:error=>{if(currentEpoch!==epoch)return;ready=!error;submit.disabled=!ready||!consent.checked;if(error)msg.textContent='Não foi possível carregar o formulário do Mercado Pago.';},
+    onSubmit:async event=>{
+     event.preventDefault();if(currentEpoch!==epoch||busy||!ready||!consent.checked||auth.currentUser?.uid!==uid)return;
+     busy=true;submit.disabled=true;msg.textContent='Confirmando assinatura fictícia…';
+     try{
+      const data=card.getCardFormData();if(!data?.token||String(data.cardholderEmail).toLowerCase()!==setup.payerEmail.toLowerCase())throw Error('invalid token');
+      const result=await call('create',{cardToken:data.token,consent:true,consentVersion:setup.consentVersion});
+      if(currentEpoch!==epoch)return;clearCard();showState(result);
+      if(result.state==='bound')showState(await call('status'));
+     }catch{if(currentEpoch===epoch){clearCard();msg.textContent='Não foi possível confirmar. Consulte a assinatura antes de tentar novamente.';}}
+     finally{busy=false;}
+    }
+   }});
+  }
+  async function refresh(){
+   if(busy||!auth.currentUser)return;busy=true;const e=++epoch;uid=auth.currentUser.uid;clearCard();setup=null;section.hidden=true;
+   try{
+    await auth.currentUser.reload();await auth.currentUser.getIdToken(true);
+    const data=await call('setup');if(e!==epoch||auth.currentUser?.uid!==uid)return;
+    setup=data;section.hidden=false;$('bet-checkout-verify').hidden=data.verified;
+    $('bet-checkout-cancel').hidden=true;$('bet-checkout-recover').hidden=true;
+    if(!data.verified){msg.textContent='Confirme seu e-mail antes de contratar. Depois clique em Consultar assinatura.';return;}
+    const status=await call('status');if(e!==epoch)return;
+    if(status.state==='none'){msg.textContent='Use apenas um cartão fictício do Mercado Pago.';await mount(e);}else showState(status);
+   }catch(err){if(e===epoch&&err?.code!=='functions/permission-denied'){section.hidden=false;msg.textContent='Checkout indisponível para esta conta ou ambiente.';}}
+   finally{busy=false;}
+  }
+  consent.addEventListener('change',()=>submit.disabled=!ready||!consent.checked||busy);
+  $('bet-checkout-refresh').addEventListener('click',refresh);
+  $('bet-checkout-verify').addEventListener('click',async()=>{
+   try{const {sendEmailVerification}=await import('https://www.gstatic.com/firebasejs/13.4.0/firebase-auth.js');await sendEmailVerification(auth.currentUser);msg.textContent='Confirmação enviada ao seu e-mail.';}catch{msg.textContent='Não foi possível enviar o e-mail agora.';}
+  });
+  async function manage(action){
+   if(busy||auth.currentUser?.uid!==uid)return;
+   if(action==='cancel'&&!confirm('Cancelar a renovação desta assinatura fictícia?'))return;
+   busy=true;const e=epoch;
+   try{const result=await call(action,{confirm:action==='cancel'});if(e!==epoch)return;showState(result);if(action==='recover'&&result.state==='bound')showState(await call('status'));}
+   catch{if(e===epoch)msg.textContent='Operação não confirmada. Consulte a assinatura.';}finally{busy=false;}
+  }
+  $('bet-checkout-recover').addEventListener('click',()=>manage('recover'));
+  $('bet-checkout-cancel').addEventListener('click',()=>manage('cancel'));
+  form.addEventListener('submit',e=>e.preventDefault());
+  onAuthStateChanged(auth,user=>{epoch++;clearCard();section.hidden=true;setup=null;uid=user?.uid||null;busy=false;if(user)void refresh();});
+ }
  const setupBetTest=()=>{
   const panel=document.getElementById('bet-test-panel');if(!panel)return;
   panel.hidden=false;
-  const consent=document.getElementById('bet-demo-consent'),start=document.getElementById('bet-demo-checkout'),feedback=document.getElementById('bet-demo-feedback');
-  if(consent&&start&&feedback){
-   consent.addEventListener('change',()=>{start.disabled=!consent.checked;feedback.textContent='Nenhuma assinatura será criada nesta demonstração.';});
-   start.addEventListener('click',()=>{
-    if(!consent.checked)return;
-    feedback.textContent=auth.currentUser?'Prévia concluída. Na versão comercial, este passo usará a integração segura do Mercado Pago. Nenhum pagamento foi solicitado.':'Prévia concluída. Na versão comercial, será necessário entrar em uma conta antes de contratar. Nenhum pagamento foi solicitado.';
-   });
-  }
+  setupIndividualCheckout();
   document.getElementById('bet-test-check').addEventListener('click',()=>testCall('sync'));
   document.getElementById('bet-test-cancel').addEventListener('click',()=>testCall('cancel'));
   onAuthStateChanged(auth,user=>{
    const uid=user?.uid||null;if(uid===lastUser)return;lastUser=uid;
    document.getElementById('bet-test-message').textContent=user?'Verificando acesso…':'Entre na conta BET autorizada.';
-   if(consent&&start&&feedback){consent.checked=false;start.disabled=true;feedback.textContent='Nenhuma assinatura será criada nesta demonstração.';}
    if(user){if(busy)queuedUser=uid;else void testCall('sync',true);}
   });
  };
@@ -1037,18 +1104,32 @@ document.getElementById("btn-recuperar")?.addEventListener("click", async () => 
     <button type="button" class="secondary" id="bet-test-check">Atualizar assinatura de teste</button>
     <button type="button" class="secondary" id="bet-test-cancel">Cancelar assinatura de teste</button>
     <p class="small" id="bet-test-message" role="status" aria-live="polite"></p>
-    <section id="bet-checkout-demo" aria-labelledby="bet-checkout-demo-title" style="margin-top:1.5rem;border-top:1px solid currentColor;padding-top:1rem">
-     <h3 id="bet-checkout-demo-title">BET completo</h3>
-     <p class="small"><strong>Prévia de contratação:</strong> demonstração sem pagamento, sem contratação e sem coleta de dados de cartão.</p>
-     <p style="font-size:1.5rem;font-weight:bold;margin-bottom:0.25rem">R$ 19,90 <span style="font-size:0.85rem;font-weight:normal">/ mês</span></p>
-     <p>7 dias gratuitos. A cobrança mensal começa após esse período se a assinatura não for cancelada.</p>
-     <ul><li>Acesso às aulas exclusivas enquanto a assinatura estiver válida.</li><li>Progresso salvo na sua conta.</li><li>Cancelamento da renovação pelo perfil.</li></ul>
-     <p class="small">As cinco primeiras aulas permanecem gratuitas, mesmo sem assinatura.</p>
-     <label style="display:flex;gap:0.65rem;align-items:flex-start;margin:1rem 0"><input id="bet-demo-consent" type="checkbox" style="width:1.25rem;height:1.25rem;flex:none;margin:0.2rem 0 0"> <span>Entendi que o plano inclui sete dias gratuitos e, após esse período, cobrança recorrente de R$ 19,90 por mês até o cancelamento.</span></label>
-     <button type="button" class="primary" id="bet-demo-checkout" disabled>Simular contratação</button>
-     <p id="bet-demo-feedback" class="small" role="status" aria-live="polite">Nenhuma assinatura será criada nesta demonstração.</p>
-    </section>
-   </div>
+    <section id="bet-checkout-real" aria-labelledby="bet-checkout-title" style="margin-top:1.5rem;border-top:1px solid currentColor;padding-top:1rem" hidden>
+ <h3 id="bet-checkout-title">BET completo</h3>
+ <p class="small"><strong>Teste integrado:</strong> utilize exclusivamente a conta e o cartão fictícios indicados pelo Mercado Pago.</p>
+ <p><strong>R$ 19,90 / mês · 7 dias gratuitos</strong></p>
+ <p>Após sete dias, a assinatura terá renovação mensal até o cancelamento. As cinco primeiras aulas permanecem gratuitas.</p>
+ <p id="bet-checkout-status" role="status" aria-live="polite"></p>
+ <button type="button" class="secondary" id="bet-checkout-verify" hidden>Enviar confirmação de e-mail</button>
+ <button type="button" class="secondary" id="bet-checkout-refresh">Consultar assinatura</button>
+ <button type="button" class="secondary" id="bet-checkout-recover" hidden>Recuperar contratação pendente</button>
+ <button type="button" class="secondary" id="bet-checkout-cancel" hidden>Cancelar renovação de teste</button>
+ <form id="bet-card-form" hidden>
+  <p class="small">Cartão de teste. Os campos de cartão são protegidos pelo Mercado Pago.</p>
+  <label for="bet-card-number">Número do cartão</label><div id="bet-card-number" style="height:44px;border:1px solid #777;border-radius:6px"></div>
+  <label for="bet-card-expiration">Validade</label><div id="bet-card-expiration" style="height:44px;border:1px solid #777;border-radius:6px"></div>
+  <label for="bet-card-security">Código de segurança</label><div id="bet-card-security" style="height:44px;border:1px solid #777;border-radius:6px"></div>
+  <label for="bet-card-name">Titular do cartão fictício</label><input id="bet-card-name" type="text" autocomplete="off">
+  <label for="bet-card-issuer">Emissor</label><select id="bet-card-issuer"></select>
+  <label for="bet-card-installments">Parcelas</label><select id="bet-card-installments"></select>
+  <label for="bet-card-doc-type">Tipo de documento</label><select id="bet-card-doc-type"></select>
+  <label for="bet-card-doc">Documento de teste</label><input id="bet-card-doc" type="text" autocomplete="off">
+  <label for="bet-card-email">E-mail do comprador fictício</label><input id="bet-card-email" type="email" readonly>
+  <label style="display:flex;gap:0.6rem;align-items:flex-start;margin:1rem 0"><input id="bet-card-consent" type="checkbox" style="width:1.25rem;height:1.25rem;flex:none"> <span>Concordo com sete dias gratuitos e a renovação mensal de R$ 19,90 até o cancelamento, exclusivamente neste ambiente de teste.</span></label>
+  <button id="bet-card-submit" type="submit" class="primary" disabled>Iniciar assinatura de teste</button>
+ </form>
+</section>
+   </div><!-- BET_TEST_PANEL_END -->
   </section>
   <section class="panel bet-profile-full" aria-labelledby="bet-profile-billing-title">
    <h2 id="bet-profile-billing-title">Pagamentos e cancelamento</h2>
