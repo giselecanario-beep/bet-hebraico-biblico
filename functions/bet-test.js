@@ -7,6 +7,7 @@ const {getFirestore,Timestamp,FieldValue}=require("firebase-admin/firestore");
 const {addMonth,verifySubscription,evaluateAccess}=require("./bet-access-policy");
 const {webhookVerdict}=require("./bet-webhook-signature");
 const {eventMatches}=require("./bet-payment-events");
+const {listInvoices}=require("./bet-invoice-pages");
 const {createCheckoutService,CONSENT_VERSION}=require("./bet-checkout-service");
 const {createCheckoutStore}=require("./bet-checkout-store");
 const {createTestProvider}=require("./bet-checkout-provider");
@@ -37,20 +38,16 @@ async function getSubscription(cfg){
  return sub;
 }
 async function invoices(cfg,now){
+ let rows;
+ try{rows=await listInvoices(mp,cfg.subscriptionId);}catch{throw new HttpsError("unavailable","Faturas não confirmadas.");}
  const pairs=[];
- for(let offset=0;offset<250;offset+=50){
-  const page=await mp("/authorized_payments/search?preapproval_id="+encodeURIComponent(cfg.subscriptionId)+"&limit=50&offset="+offset);
-  if(!Array.isArray(page.results)||!Number.isSafeInteger(Number(page.paging?.total))||Number(page.paging.total)<0||Number(page.paging.offset)!==offset)throw new HttpsError("unavailable","Faturas não confirmadas.");
-  for(const i of page.results){
-   const due=Date.parse(i.debit_date);
-   if(i.preapproval_id!==cfg.subscriptionId||i.payment?.status!=="approved"||!/^\d+$/.test(String(i.payment?.id))||!Number.isFinite(due)||due>now||addMonth(due)<=now)continue;
-   pairs.push({invoice:i,payment:await mp("/v1/payments/"+encodeURIComponent(i.payment.id))});
-   if(pairs.length>5)throw new HttpsError("failed-precondition","Faturas duplicadas; confira administrativamente.");
-  }
-  if(offset+page.results.length>=Number(page.paging.total))return pairs;
-  if(page.results.length!==50)throw new HttpsError("unavailable","Paginação de faturas incompleta.");
+ for(const i of rows){
+  const due=Date.parse(i.debit_date);
+  if(i.payment?.status!=="approved"||!/^\d+$/.test(String(i.payment?.id))||!Number.isFinite(due)||due>now||addMonth(due)<=now)continue;
+  pairs.push({invoice:i,payment:await mp("/v1/payments/"+encodeURIComponent(i.payment.id))});
+  if(pairs.length>5)throw new HttpsError("failed-precondition","Faturas duplicadas; confira administrativamente.");
  }
- throw new HttpsError("unavailable","Histórico de faturas requer conferência.");
+ return pairs;
 }
 function protect(snap,source="mercadopago-test"){
  const d=snap.data();
