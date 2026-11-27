@@ -1,0 +1,3 @@
+# Integração isolada de teste
+
+Não publicar vendas a partir desta branch. A função verifica a assinatura já criada no Mercado Pago por API de servidor, valida vendedor de teste, comprador, plano, preço, carência e UID Firebase autorizado. O teste pode escrever apenas uma autorização temporária identificada como mercadopago-test. Não aceita um ID vindo do navegador. Não concede renovação e não cancela no provedor. Requer MP_TEST_ACCESS_TOKEN e BET_MP_TEST_CONFIG (JSON privado com uid, sellerId, payerId, planId, subscriptionId). As credenciais não devem ir ao GitHub. Antes de produção implementar vínculo seguro no checkout, reconciliação de pagamentos, cancelamento e testes de ponta a ponta.
