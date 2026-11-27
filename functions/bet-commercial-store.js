@@ -67,6 +67,32 @@ function createCommercialStore(db,{Timestamp,FieldValue}){
    return access;
   });
  }
- return {read,reserve,markUncertain,bind,readBinding,assertManagement,reconcile};
+ async function eventBinding(subscriptionId){
+  if(!/^[a-f0-9]{32}$/i.test(subscriptionId))throw Error("invalid-subscription-id");
+  const snap=await subRef({subscriptionId}).get();
+  if(!snap.exists)return null;
+  const b=snap.data();
+  if(b.subscriptionId!==subscriptionId||b.environment!=="production")throw Error("binding-lock-conflict");
+  return b;
+ }
+ async function payerBinding(sellerId,payerId){
+  if(!/^\d{1,25}$/.test(String(sellerId))||!/^\d{1,25}$/.test(String(payerId)))throw Error("invalid-payer");
+  const snap=await payerRef({sellerId,payerId}).get();
+  if(!snap.exists)return null;
+  const b=snap.data();
+  if(b.sellerId!==String(sellerId)||b.payerId!==String(payerId)||b.environment!=="production")throw Error("binding-lock-conflict");
+  const checked=await eventBinding(b.subscriptionId);
+  if(!checked||checked.uid!==b.uid||checked.reference!==b.reference||checked.payerId!==b.payerId||checked.sellerId!==b.sellerId)throw Error("binding-lock-conflict");
+  return checked;
+ }
+ async function referenceIntent(reference){
+  if(!/^bet_live_[a-f0-9]{48}$/.test(reference))return null;
+  const snap=await refRef({reference}).get();
+  if(!snap.exists)return null;
+  const lock=snap.data(),i=await read(lock.uid);
+  if(!i||i.reference!==reference||lock.reference!==reference||i.environment!=="production")throw Error("reference-lock-conflict");
+  return i;
+ }
+ return {read,reserve,markUncertain,bind,readBinding,assertManagement,reconcile,eventBinding,payerBinding,referenceIntent};
 }
 module.exports={createCommercialStore};
