@@ -19,16 +19,39 @@ function Save-BetSecret([string]$name,[string]$value){
 $stage=Join-Path ([IO.Path]::GetTempPath()) ('bet-live-'+[guid]::NewGuid().ToString('N'))
 try{
  Write-Host '1/4 - Credenciais de PRODUCAO da conta real (nao use a conta TESTE).' -ForegroundColor Cyan
- $secure=Read-Host 'Cole o Access Token real (oculto)' -AsSecureString
- $token=[System.Net.NetworkCredential]::new('',$secure).Password.Trim()
- $publicKey=(Read-Host 'Cole a Public Key de producao').Trim()
+ $valid=$false
+ for($attempt=1;$attempt -le 3;$attempt++){
+  $secure=Read-Host 'Copie especificamente o ACCESS TOKEN de producao (oculto)' -AsSecureString
+  $token=[System.Net.NetworkCredential]::new('',$secure).Password.Trim()
+  if($token -match '^APP_USR-[a-fA-F0-9-]{36}$'){
+   Write-Host 'Essa chave tem o formato de Public Key. Copie o campo Access Token, que e diferente.' -ForegroundColor Yellow
+   continue
+  }
+  if($token -notmatch '^APP_USR-[A-Za-z0-9-]{30,}$'){
+   Write-Host 'Formato do Access Token invalido. Copie o campo completo de producao.' -ForegroundColor Yellow
+   continue
+  }
+  try{$me=Invoke-BetMercadoPago '/users/me'}catch{
+   $status=0;try{$status=[int]$_.Exception.Response.StatusCode}catch{}
+   if($status -in @(401,403)){Write-Host "Access Token nao aceito pelo Mercado Pago (HTTP $status). Confira o campo e tente novamente." -ForegroundColor Yellow;continue}
+   if($status){Write-Host "Consulta ao Mercado Pago falhou (HTTP $status)."}else{Write-Host 'Nao foi possivel consultar a API.'}
+   return
+  }
+  if("$($me.id)" -notmatch '^\d+$' -or "$($me.id)" -in @('3875619579','3880684960') -or !$me.nickname -or $me.nickname -match '^TESTUSER'){
+   Write-Host 'A API nao confirmou um vendedor real. Confira se voce esta na conta real, e nao TESTE.' -ForegroundColor Yellow
+   return
+  }
+  $valid=$true;break
+ }
+ if(!$valid){Write-Host 'Access Token nao validado; nenhuma alteracao realizada.';return}
+ Write-Host 'Access Token validado no Mercado Pago.' -ForegroundColor Green
+ $publicKey=(Read-Host 'Agora cole a Public Key de producao').Trim()
+ if($publicKey -notmatch '^APP_USR-[a-fA-F0-9-]{36}$'){Write-Host 'Formato da Public Key invalido.';return}
  $appId=(Read-Host 'Cole o ID numerico da aplicacao real').Trim()
- if($token -notmatch '^APP_USR-[A-Za-z0-9-]{30,}$' -or $publicKey -notmatch '^APP_USR-[a-fA-F0-9-]{36}$' -or $appId -notmatch '^\d{6,25}$' -or $appId -eq '3362162224734954'){throw 'Credenciais invalidas ou aplicacao ficticia'}
- $me=Invoke-BetMercadoPago '/users/me'
- if("$($me.id)" -notmatch '^\d+$' -or "$($me.id)" -in @('3875619579','3880684960') -or !$me.nickname -or $me.nickname -match '^TESTUSER'){throw 'Vendedor real nao confirmado'}
+ if($appId -notmatch '^\d{6,25}$' -or $appId -eq '3362162224734954'){Write-Host 'ID da aplicacao invalido ou ficticio.';return}
  Write-Host 'Vendedor real confirmado.'
  Write-Host '2/4 - Localizando plano comercial de R$ 19,90 e 7 dias gratuitos...'
- $matches=@();$limit=20;$done=$false
+ $matches=@();$limit=12;$done=$false
  for($offset=0;$offset -lt 400;$offset+=$limit){
   $page=Invoke-BetMercadoPago "/preapproval_plan/search?limit=$limit&offset=$offset"
   if($null -eq $page.paging.total -or [int]$page.paging.offset -ne $offset){throw 'Busca de planos incompleta'}
