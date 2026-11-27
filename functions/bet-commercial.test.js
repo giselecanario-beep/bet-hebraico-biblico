@@ -23,10 +23,10 @@ function fixture(){
   });
   chain=task.catch(()=>{});return task;
  }};
- const store=createCommercialStore(db,{Timestamp:{fromMillis:x=>x},FieldValue:{serverTimestamp:()=>now}});
+ const store=createCommercialStore(db,{Timestamp:{fromMillis:x=>({toMillis:()=>x})},FieldValue:{serverTimestamp:()=>now}});
  const subscriptions=[];
  let posts=0,fail=false;
- const provider={verifyOffer:async()=>{},findByEmail:async email=>subscriptions.filter(x=>x.payer_email===email),get:async id=>subscriptions.find(x=>x.id===id),create:async p=>{
+ const provider={verifySeller:async()=>{},verifyOffer:async()=>{},invoices:async()=>[],payment:async()=>{throw Error("unexpected payment");},cancel:async id=>{const sub=subscriptions.find(x=>x.id===id);if(!sub)throw Error("not found");sub.status="cancelled";},findByEmail:async email=>subscriptions.filter(x=>x.payer_email===email),get:async id=>subscriptions.find(x=>x.id===id),create:async p=>{
   posts++;
   const s={id:posts.toString(16).padStart(32,"0"),payer_id:100+posts,payer_email:p.payer_email,external_reference:p.external_reference,collector_id:1,application_id:3,preapproval_plan_id:o.planId,status:"authorized",date_created:new Date(now).toISOString(),next_payment_date:new Date(now+7*86400000).toISOString(),auto_recurring:recurring};
   subscriptions.push(s);
@@ -57,6 +57,16 @@ function fixture(){
  assert.equal(f.data.get("betEntitlements/"+b.uid).active,true);
  assert.notEqual(f.data.get("betEntitlements/"+a.uid).subscriptionId,f.data.get("betEntitlements/"+b.uid).subscriptionId);
  assert.ok(!JSON.stringify([...f.data]).includes(cardToken));
+ await assert.rejects(()=>f.svc.cancel({...a,email:b.email},{confirm:true}),/intent-mismatch/);
+ await assert.rejects(()=>f.svc.cancel(a,{confirm:false}),/confirmation-required/);
+ assert.equal((await f.svc.status(a)).active,true);
+ const cancelled=await f.svc.cancel(a,{confirm:true,subscriptionId:f.subscriptions[1].id});
+ assert.equal(cancelled.status,"cancelled");
+ assert.equal(cancelled.active,false);
+ assert.equal((await f.svc.status(b)).active,true);
+ assert.equal(f.subscriptions[1].status,"authorized");
+ assert.equal((await f.svc.cancel(a,{confirm:true})).cancelled,true);
+ assert.equal(f.data.get("betEntitlements/"+a.uid).active,false);
  await assert.rejects(()=>f.svc.checkout({...a,uid:"other_student_123"},input),/existing-provider-subscription/);
  await assert.rejects(()=>f.svc.recover({...a,email:b.email}),/intent-mismatch/);
  const i=await f.store.read(a.uid),s=f.subscriptions[0];
