@@ -27,7 +27,7 @@ $tag=[guid]::NewGuid().ToString('N')
 $dir="bet-preview-$tag"
 $conf="firebase-preview-$tag.json"
 try {
- $remote=(Invoke-WebRequest "$base/index.html" -UseBasicParsing).Content
+ $remote=[System.Text.Encoding]::UTF8.GetString((Invoke-WebRequest "$base/index.html" -UseBasicParsing).RawContentStream.ToArray())
  $html=[IO.File]::ReadAllText((Join-Path $root 'public/index.html'))
  $anchor='const db = getFirestore(app);'
  $marker='<p class="small">As vendas ainda nao estao abertas nesta versao beta.</p>'
@@ -39,7 +39,7 @@ try {
  $marker=$markMatch.Value
  if (!$html.Contains($anchor) -or !$html.Contains($marker) -or $html.Contains('bet-test-panel')) { throw 'HTML local difere do esperado; nenhuma publicacao realizada' }
  if ([regex]::Matches($html,[regex]::Escape($anchor)).Count -ne 1 -or [regex]::Matches($html,[regex]::Escape($marker)).Count -ne 1) { throw 'HTML local ambiguo' }
- $html=$html.Replace($anchor,$anchor+"n"+$jsMatch.Value).Replace($marker,$marker+$uiMatch.Value)
+ $html=$html.Replace($anchor,$anchor+[Environment]::NewLine+$jsMatch.Value).Replace($marker,$marker+$uiMatch.Value)
  Copy-Item -LiteralPath 'public' -Destination $dir -Recurse
  [IO.File]::WriteAllText((Join-Path $root "$dir/index.html"),$html,(New-Object System.Text.UTF8Encoding($false)))
  $hosting=(Get-Content firebase.json -Raw | ConvertFrom-Json).hosting
