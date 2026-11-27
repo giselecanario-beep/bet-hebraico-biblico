@@ -30,7 +30,7 @@ function sameIntent(intent,u,o){
 }
 function confirmSubscription(i,s,now){
  const r=s?.auto_recurring||{},created=Date.parse(s?.date_created);
- if(!idOK(s?.id)||s.external_reference!==i.reference||String(s.collector_id)!==i.sellerId||String(s.application_id)!==i.applicationId||!numeric(s.payer_id)||String(s.payer_id)===i.sellerId||s.preapproval_plan_id!==i.planId||!Number.isFinite(created)||created<i.createdAt-60000||created>now)throw Error("subscription-mismatch");
+ if(!idOK(s?.id)||(i.mode!=="hosted"&&s.external_reference!==i.reference)||(i.mode==="hosted"&&typeof s.external_reference==="string"&&s.external_reference.startsWith("bet_live_")&&s.external_reference!==i.reference)||String(s.collector_id)!==i.sellerId||String(s.application_id)!==i.applicationId||!numeric(s.payer_id)||String(s.payer_id)===i.sellerId||s.preapproval_plan_id!==i.planId||!Number.isFinite(created)||created<i.createdAt-60000||created>now)throw Error("subscription-mismatch");
  if(s.payer_email!=null&&(!emailOK(s.payer_email)||normal(s.payer_email)!==i.email))throw Error("payer-email-mismatch");
  if(r.currency_id!==i.currency||Math.round(Number(r.transaction_amount)*100)!==i.priceCents||r.frequency!==1||r.frequency_type!=="months"||r.free_trial?.frequency!==i.trialDays||r.free_trial?.frequency_type!=="days")throw Error("plan-mismatch");
  if(i.subscriptionId&&i.subscriptionId!==s.id)throw Error("already-bound");
@@ -45,11 +45,30 @@ function createCommercialService({store,provider,offer,clock=Date.now,reference=
  async function bind(i,sub){
   // The email-filtered search must independently corroborate the exact provider ID.
   const matches=await provider.findByEmail(i.email,o);
-  if(!Array.isArray(matches)||matches.filter(x=>x?.id===sub.id&&x.external_reference===i.reference).length!==1||matches.some(x=>x?.external_reference===i.reference&&x.id!==sub.id))throw Error("email-search-mismatch");
+  if(i.mode==="hosted"){
+   // Hosted checkout has no BET external_reference. Require a unique, independently
+   // email-filtered record and matching payer, created after reservation.
+   if(!Array.isArray(matches)||matches.length!==1||matches[0].id!==sub.id||String(matches[0].payer_id)!==String(sub.payer_id))throw Error("email-search-mismatch");
+  }else if(!Array.isArray(matches)||matches.filter(x=>x?.id===sub.id&&x.external_reference===i.reference).length!==1||matches.some(x=>x?.external_reference===i.reference&&x.id!==sub.id))throw Error("email-search-mismatch");
   const b=confirmSubscription(i,sub,clock());
   if(sub.status!=="authorized")throw Error("not-authorized");
   await store.bind(i,b,evaluateAccess(sub,b,clock()));
   return {state:"bound"};
+ }
+ async function beginHosted(auth,input){
+  const u=userIdentity(auth);
+  if(o.salesEnabled!==true)throw Error("sales-disabled");
+  if(o.planId!=="417a60404e374b1d935b238e20090873")throw Error("hosted-plan-mismatch");
+  if(input?.consent!==true||input?.consentVersion!==CONSENT_VERSION)throw Error("consent-required");
+  const old=await store.read(u.uid);
+  if(old){sameIntent(old,u,o);return {state:old.state};}
+  await provider.verifyOffer(o);
+  const existing=await provider.findByEmail(u.email,o);
+  if(!Array.isArray(existing)||existing.length!==0)throw Error("existing-provider-subscription");
+  const i={...makeIntent(auth,o,reference(),clock()),mode:"hosted"};
+  const reserved=await store.reserve(i);
+  if(!reserved.created){sameIntent(reserved.intent,u,o);return {state:reserved.intent.state};}
+  return {state:"hosted-ready",url:"https://www.mercadopago.com.br/subscriptions/checkout?preapproval_plan_id="+o.planId};
  }
  async function checkout(auth,input){
   const u=userIdentity(auth);
@@ -84,10 +103,11 @@ function createCommercialService({store,provider,offer,clock=Date.now,reference=
   await provider.verifyOffer(o);
   const rows=await provider.findByEmail(i.email,o);
   if(!Array.isArray(rows))throw Error("invalid-search");
-  const matches=rows.filter(x=>x?.external_reference===i.reference);
+  const matches=i.mode==="hosted"?rows:rows.filter(x=>x?.external_reference===i.reference);
   if(matches.length!==1||!idOK(matches[0].id))return {state:"uncertain"};
   const sub=await provider.get(matches[0].id);
   if(sub.id!==matches[0].id)throw Error("provider-id-mismatch");
+  if(i.mode==="hosted"&&sub.status!=="authorized")return {state:"uncertain"};
   return bind(i,sub);
  }
  async function managementContext(auth){
@@ -164,6 +184,6 @@ function createCommercialService({store,provider,offer,clock=Date.now,reference=
   if(locked.subscriptionId!==subscriptionId||checked.payerId!==b.payerId||locked.payerId!==b.payerId)throw Error("binding-mismatch");
   return reconcileAccess(i,b,sub);
  }
- return {checkout,recover,status,cancel,reconcileEvent};
+ return {checkout,beginHosted,recover,status,cancel,reconcileEvent};
 }
 module.exports={CONSENT_VERSION,userIdentity,validateOffer,makeIntent,sameIntent,confirmSubscription,payload,createCommercialService};
