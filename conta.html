@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer"><meta name="robots" content="noindex,nofollow">
+<title>Minha conta | BET Hebraico Bíblico</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f7f1e7;color:#302722;font:17px/1.5 Arial,sans-serif}header{background:#751f32;color:#fff;padding:26px 16px;text-align:center;font-family:Georgia,serif}header strong{font-size:42px;letter-spacing:.13em}header span{display:block;letter-spacing:.1em}main{max-width:480px;margin:32px auto;padding:0 18px}section{background:#fffaf4;border:1px solid #dfd3c6;border-radius:12px;padding:24px}h1{font:700 29px/1.2 Georgia,serif;color:#751f32;margin:0 0 14px}label{display:block;margin:14px 0 5px;font-weight:600}input{width:100%;padding:12px;border:1px solid #aa8f84;border-radius:7px;font:inherit;color:inherit;background:white;min-height:48px}button,a.return{display:block;width:100%;border:1px solid #751f32;border-radius:7px;background:#751f32;color:white;padding:12px;min-height:46px;font:600 16px Arial,sans-serif;text-align:center;cursor:pointer;text-decoration:none;margin-top:15px}button.secondary,a.return{background:transparent;color:#751f32}button:disabled{opacity:.65;cursor:wait}#message{overflow-wrap:anywhere}#message[data-kind=error]{background:#fff1ee;color:#7f2525;padding:10px;border-radius:6px}#message[data-kind=success]{background:#edf5eb;color:#285b37;padding:10px;border-radius:6px}[hidden]{display:none!important}small{display:block;color:#70645d;margin-top:6px}
+</style>
+</head>
+<body>
+<header><strong>BET</strong><span>HEBRAICO BÍBLICO</span></header>
+<main><section>
+<h1 id="heading">Minha conta BET</h1>
+<p id="message" role="status" aria-live="polite">Conferindo seu link de segurança…</p>
+<form id="reset" hidden novalidate>
+<label for="password">Nova senha</label><input type="password" id="password" autocomplete="new-password" minlength="6" required>
+<label for="repeat">Confirme a nova senha</label><input type="password" id="repeat" autocomplete="new-password" minlength="6" required>
+<button class="secondary" id="show" type="button" aria-pressed="false">Mostrar senhas</button>
+<small>Use pelo menos seis caracteres e uma senha difícil de adivinhar.</small>
+<button id="save" type="submit">Salvar nova senha</button>
+</form>
+<button id="confirm" type="button" hidden>Confirmar</button>
+<button id="secure" class="secondary" type="button" hidden>Enviar link para redefinir a senha</button>
+<a class="return" href="https://bet-hebraico.web.app/#entrar">Voltar ao BET</a>
+</section></main>
+<script type="module">
+import {initializeApp} from 'https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js';
+import {initializeAuth,inMemoryPersistence,verifyPasswordResetCode,confirmPasswordReset,checkActionCode,applyActionCode,sendPasswordResetEmail} from 'https://www.gstatic.com/firebasejs/13.4.0/firebase-auth.js';
+const firebaseConfig = {
+    apiKey: "AIzaSyC4CPhtjFKxFFijIgwG8g1Lx4hEkbxKzLw",
+    authDomain: "bet-hebraico.firebaseapp.com",
+    projectId: "bet-hebraico",
+    storageBucket: "bet-hebraico.firebasestorage.app",
+    messagingSenderId: "770607412120",
+    appId: "1:770607412120:web:3c64ae8e16e27253c231ed",
+    measurementId: "G-8JTWBQKE46"
+  };
+const auth=initializeAuth(initializeApp(firebaseConfig),{persistence:inMemoryPersistence});
+auth.languageCode='pt-BR';
+const home='https://bet-hebraico.web.app/#entrar';
+const params=new URLSearchParams(location.search),mode=params.get('mode'),code=params.get('oobCode');
+history.replaceState(null,'',location.pathname);
+const $=id=>document.getElementById(id),msg=$('message'),form=$('reset'),confirm=$('confirm');
+function message(text,kind='info'){msg.textContent=text;msg.dataset.kind=kind;}
+function error(e){const k=e?.code;message(k==='auth/weak-password'||k==='auth/password-does-not-meet-requirements'?'Escolha uma senha mais forte.':k==='auth/network-request-failed'?'Não foi possível conectar. Confira sua internet e tente novamente.':k==='auth/expired-action-code'||k==='auth/invalid-action-code'?'Este link expirou ou já foi utilizado. Volte ao BET e solicite um novo link.':'Não foi possível concluir esta ação com segurança. Volte ao BET e tente novamente.','error');}
+function success(text){form.hidden=true;confirm.hidden=true;message(text+' Você será encaminhado ao BET.','success');setTimeout(()=>location.replace(home),1600);}
+$('show').addEventListener('click',()=>{const visible=$('password').type==='password';$('password').type=visible?'text':'password';$('repeat').type=visible?'text':'password';$('show').textContent=visible?'Ocultar senhas':'Mostrar senhas';$('show').setAttribute('aria-pressed',String(visible));});
+async function start(){
+ if(!code||!['resetPassword','verifyEmail','recoverEmail','verifyAndChangeEmail'].includes(mode)){message('Link inválido. Volte ao BET para solicitar um novo link.','error');return;}
+ try{
+  if(mode==='resetPassword'){
+   $('heading').textContent='Crie sua nova senha';
+   await verifyPasswordResetCode(auth,code);
+   message('Digite sua nova senha e confirme. Você retornará ao BET depois de salvar.');
+   form.hidden=false;
+   form.addEventListener('submit',async e=>{
+    e.preventDefault();if($('save').disabled)return;
+    const password=$('password').value;
+    if(password.length<6){message('Use pelo menos seis caracteres.','error');return;}
+    if(password!==$('repeat').value){message('As senhas não coincidem. Confira os dois campos.','error');return;}
+    $('save').disabled=true;message('Salvando sua nova senha…');
+    try{await confirmPasswordReset(auth,code,password);$('password').value='';$('repeat').value='';success('Senha alterada com sucesso!');}
+    catch(e){error(e);$('save').disabled=false;}
+   });
+  }else{
+   const info=await checkActionCode(auth,code);
+   const expected={verifyEmail:'VERIFY_EMAIL',recoverEmail:'RECOVER_EMAIL',verifyAndChangeEmail:'VERIFY_AND_CHANGE_EMAIL'}[mode];
+   if(info.operation!==expected)throw Error('Ação divergente');
+   const recovery=mode==='recoverEmail',change=mode==='verifyAndChangeEmail';
+   $('heading').textContent=recovery?'Recuperar e-mail':change?'Confirmar alteração de e-mail':'Confirme seu e-mail';
+   message(recovery?'Confirme para restaurar o e-mail anterior da sua conta.':change?'Confirme para concluir a alteração do e-mail da sua conta.':'Confirme o seu endereço de e-mail para usar os recursos da sua conta BET.');
+   confirm.textContent=recovery?'Restaurar e-mail':'Confirmar e-mail';confirm.hidden=false;
+   confirm.addEventListener('click',async()=>{
+    if(confirm.disabled)return;confirm.disabled=true;
+    try{
+     await applyActionCode(auth,code);
+     if(recovery){
+      confirm.hidden=true;message('E-mail restaurado. Se você não solicitou a alteração, recomendamos redefinir sua senha.','success');
+      if(info.data?.email){const btn=$('secure');btn.hidden=false;btn.onclick=async()=>{btn.disabled=true;try{await sendPasswordResetEmail(auth,info.data.email,{url:home,handleCodeInApp:false});message('Confira sua caixa de entrada para redefinir a senha.','success');btn.hidden=true;}catch(e){error(e);btn.disabled=false;}};}
+     }else success('E-mail confirmado com sucesso!');
+    }catch(e){error(e);confirm.disabled=false;}
+   });
+  }
+ }catch(e){error(e);}
+}
+void start();
+</script>
+</body></html>

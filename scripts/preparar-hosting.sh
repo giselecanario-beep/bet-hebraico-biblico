@@ -6,6 +6,8 @@ rev="$(git rev-parse HEAD)"
 out="$(mktemp -d "${TMPDIR:-/tmp}/bet-hosting.XXXXXXXX")"
 mkdir -p "$out/public"
 git show "$rev:index.html" > "$out/public/index.html"
+git show "$rev:conta.html" > "$out/public/conta.html"
+test -s "$out/public/conta.html"
 # Lista explícita: publicar apenas gravações utilizadas e respectivos créditos.
 files=(assets/audio/{alef-parada-glotal-peter-isotalo.ogg,bet-voz-humana-ijon.ogg,README_ALEF_BET.md} assets/audio/vogal-{a,e,i,o,u}.mp3 assets/audio/palavra-{01,02,03,04,05,06}.wav assets/audio/lingualibre/letra-{03,04,05,07,08,09,10,11}.wav assets/audio/lingualibre/MANIFEST.json)
 for f in "${files[@]}"; do
@@ -25,6 +27,7 @@ cat > "$out/firebase.json" <<'JSON'
     "headers": [
       {"source":"**","headers":[{"key":"X-Content-Type-Options","value":"nosniff"},{"key":"Referrer-Policy","value":"strict-origin-when-cross-origin"}]},
       {"source":"/index.html","headers":[{"key":"Cache-Control","value":"no-cache"}]},
+      {"source":"/conta.html","headers":[{"key":"Cache-Control","value":"no-store"},{"key":"Referrer-Policy","value":"no-referrer"}]},
       {"source":"/","headers":[{"key":"Cache-Control","value":"no-cache"}]}
     ]
   }
