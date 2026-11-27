@@ -1,0 +1,17 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';import {PLAN,verifyPlan,verifySub,accessFor,choose,monthAfter} from './official-core.mjs';
+const now=Date.parse('2026-11-27T12:00:00Z'), day=86400000, recurring={frequency:1,frequency_type:'months',transaction_amount:19.9,currency_id:'BRL',free_trial:{frequency:7,frequency_type:'days'}};
+const s={id:'abcdef123456',preapproval_plan_id:PLAN,collector_id:123,auto_recurring:recurring,status:'authorized',date_created:new Date(now).toISOString(),next_payment_date:new Date(now+7*day).toISOString()};
+const invoice={preapproval_id:s.id,currency_id:'BRL',transaction_amount:19.9,debit_date:new Date(now).toISOString(),verified:true};
+test('plano oficial',()=>assert.equal(verifyPlan({id:PLAN,collector_id:123,status:'active',auto_recurring:recurring}),123));
+test('plano incorreto',()=>assert.throws(()=>verifySub({...s,preapproval_plan_id:'wrong'},123)));
+test('titular incorreto',()=>assert.throws(()=>verifySub(s,999)));
+test('email incorreto',()=>assert.throws(()=>choose([{...s,payer_email:'other@example.com'}],'student@example.com',123)));
+test('duplicidade',()=>assert.throws(()=>choose([s,{...s,id:'different123'}],'student@example.com',123)));
+test('trial',()=>assert.equal(accessFor(s,null,[],now).active,true));
+test('pendente',()=>assert.equal(accessFor({...s,status:'pending'},null,[],now).active,false));
+test('vencido',()=>assert.equal(accessFor(s,{trialEnd:now-1},[],now).active,false));
+test('pagamento aprovado',()=>assert.equal(accessFor(s,{trialEnd:now-1},[invoice],now).active,true));
+test('estorno',()=>assert.equal(accessFor(s,{trialEnd:now-1},[{...invoice,verified:false}],now).active,false));
+test('cancelamento conserva período pago',()=>assert.equal(accessFor({...s,status:'canceled'},{trialEnd:now-1},[invoice],now).active,true));
+test('pausa bloqueia',()=>assert.equal(accessFor({...s,status:'paused'},null,[invoice],now).active,false));
+test('fim de mês',()=>assert.equal(new Date(monthAfter(Date.parse('2026-01-31T12:00:00Z'))).toISOString(),'2026-02-28T12:00:00.000Z'));

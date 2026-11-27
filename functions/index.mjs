@@ -97,3 +97,5 @@ export const betCancelTest=onCall(opts,async req=>{
  if(!['cancelled','canceled'].includes(s.status))await mp('/preapproval/'+encodeURIComponent(l.id),'PUT',{status:'canceled'});
  return sync(u);
 });
+
+export {betOfficialSync,betOfficialStart,betOfficialCancel,betOfficialReconcile} from './official.mjs';
