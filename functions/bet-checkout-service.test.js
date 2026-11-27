@@ -9,8 +9,8 @@ const recurring={currency_id:"BRL",transaction_amount:19.9,frequency:1,frequency
 const sub={id,external_reference:ref,collector_id:10,application_id:20,payer_id:30,preapproval_plan_id:offer.planId,date_created:new Date(now).toISOString(),next_payment_date:new Date(now+7*86400000).toISOString(),status:"authorized",auto_recurring:recurring};
 function setup(overrides={},opt={}){
  let intent=null,posts=0,gets=0,access=null;
- const store={async reserve(i){if(intent)return {created:false,intent};intent=i;return {created:true,intent:i};},async bind(i,b,a){intent={...i,...b};access=a;},async markUncertain(i){if(intent?.reference===i.reference)intent={...i,state:"uncertain"};}};
- const provider={async verifyOffer(){},async create(p){posts++;assert.equal(p.payer_email,offer.payerEmail);assert.equal(p.preapproval_plan_id,offer.planId);assert.equal(p.external_reference,ref);if(overrides.create) return overrides.create(p);return {id};},async get(){gets++;return overrides.sub||sub;}};
+ const store={async read(){return intent;},async reserve(i){if(intent)return {created:false,intent};intent=i;return {created:true,intent:i};},async bind(i,b,a){intent={...i,...b};access=a;},async markUncertain(i){if(intent?.reference===i.reference)intent={...i,state:"uncertain"};}};
+ const provider={async verifyOffer(){},async findByReference(){return [{id}];},async create(p){posts++;assert.equal(p.payer_email,offer.payerEmail);assert.equal(p.preapproval_plan_id,offer.planId);assert.equal(p.external_reference,ref);if(overrides.create) return overrides.create(p);return {id};},async get(){gets++;return overrides.sub||sub;}};
  Object.assign(provider,overrides.provider||{});
  const service=createCheckoutService({store,provider,offer:{...offer,...opt},clock:()=>now,reference:()=>ref});
  return {service,stats:()=>({intent,posts,gets,access})};
@@ -47,5 +47,17 @@ function setup(overrides={},opt={}){
  await createTestProvider({token:"fake-credential-for-unit-test-only",fetchImpl}).verifyOffer(offer);
  assert.equal(calls.length,2);
  assert.ok(calls.every(c=>c.method==="GET"));
- console.log("23 verificacoes de checkout individual aprovadas");
+ const f=setup({create:async()=>{throw Error("timeout");}});
+ assert.equal((await f.service.recover(auth)).state,"none");
+ assert.equal((await f.service.checkout(auth,input)).state,"uncertain");
+ assert.equal((await f.service.recover(auth)).state,"bound");
+ assert.equal(f.stats().posts,1);
+ assert.equal((await f.service.recover(auth)).state,"bound");
+ const g=setup({create:async()=>{throw Error("timeout");},provider:{async findByReference(){return [{id},{id:"d".repeat(32)}];}}});
+ await g.service.checkout(auth,input);
+ assert.equal((await g.service.recover(auth)).state,"uncertain");
+ assert.equal(g.stats().access,null);
+ assert.equal(g.stats().posts,1);
+ await assert.rejects(()=>f.service.recover({...auth,email_verified:false}));
+ console.log("32 verificacoes de checkout e recuperacao aprovadas");
 })().catch(e=>{console.error(e);process.exitCode=1;});
