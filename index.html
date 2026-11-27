@@ -511,6 +511,32 @@ button:focus-visible,a:focus-visible,input:focus-visible,summary:focus-visible{o
     const auth = getAuth(app);
     
 const db = getFirestore(app);
+
+const betTestPreview=/^bet-hebraico--[a-z0-9-]+\.web\.app$/.test(location.hostname);
+if(betTestPreview){
+ const testCall=async activate=>{
+  const user=auth.currentUser, msg=document.getElementById('bet-test-message');
+  if(!user){msg.textContent='Entre na sua conta BET autorizada para o teste.';return;}
+  const buttons=[...document.querySelectorAll('#bet-test-panel button')];
+  buttons.forEach(b=>b.disabled=true);msg.textContent='Consultando o Mercado Pago…';
+  try{
+   const {getFunctions,httpsCallable}=await import('https://www.gstatic.com/firebasejs/13.4.0/firebase-functions.js');
+   const {data}=await httpsCallable(getFunctions(app,'us-central1'),'betTestSubscription')({activate});
+   if(auth.currentUser?.uid!==user.uid){msg.textContent='A conta mudou. Consulte novamente.';return;}
+   msg.textContent=data.trialActive?'Teste confirmado até '+new Date(data.validUntil).toLocaleString('pt-BR')+(data.applied?'. Autorização temporária aplicada.':'. A autorização ainda não foi aplicada.'):'A assinatura não possui período gratuito ativo.';
+   if(data.applied)await window.betConsultarAssinatura?.(user);
+  }catch(e){msg.textContent=e?.message||'Não foi possível consultar a assinatura de teste.';}
+  finally{buttons.forEach(b=>b.disabled=false);}
+ };
+ const setupBetTest=()=>{
+  const panel=document.getElementById('bet-test-panel');if(!panel)return;
+  panel.hidden=false;
+  document.getElementById('bet-test-check').addEventListener('click',()=>testCall(false));
+  document.getElementById('bet-test-activate').addEventListener('click',()=>testCall(true));
+ };
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setupBetTest,{once:true});else setupBetTest();
+}
+
 const progressoRef = (uid) => doc(db, "users", uid, "learning", "intro");
 
 async function salvarProgresso(uid, aulas) {
@@ -985,6 +1011,12 @@ document.getElementById("btn-recuperar")?.addEventListener("click", async () => 
    <p id="bet-profile-validity" class="small"></p>
    <button type="button" id="bet-profile-refresh" class="secondary" onclick="window.betAtualizarAssinatura?.()" hidden>Atualizar status</button>
    <p class="small">As vendas ainda não estão abertas nesta versão beta.</p>
+   <div id="bet-test-panel" hidden>
+    <p class="small"><strong>Ambiente de teste privado:</strong> somente a conta de teste autorizada pode validar a assinatura. Nenhuma cobrança é iniciada aqui.</p>
+    <button type="button" class="secondary" id="bet-test-check">Verificar assinatura de teste</button>
+    <button type="button" class="secondary" id="bet-test-activate">Aplicar acesso de teste</button>
+    <p class="small" id="bet-test-message" role="status" aria-live="polite"></p>
+   </div>
   </section>
   <section class="panel bet-profile-full" aria-labelledby="bet-profile-billing-title">
    <h2 id="bet-profile-billing-title">Pagamentos e cancelamento</h2>
