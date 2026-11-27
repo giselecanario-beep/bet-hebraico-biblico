@@ -1,0 +1,14 @@
+"use strict";
+const assert=require("node:assert/strict");
+const {makeIntent,confirmBinding}=require("./bet-checkout-binding");
+const now=1795785600000,auth={uid:"fakeuid123456",email:"Test@example.com",email_verified:true},offer={environment:"test",enabled:true,planId:"a".repeat(32),sellerId:"10",applicationId:"20",payerId:"30"},reference="bet_"+"b".repeat(48);
+const intent=makeIntent(auth,offer,reference,now);
+const sub={id:"c".repeat(32),external_reference:reference,collector_id:10,application_id:20,payer_id:30,preapproval_plan_id:offer.planId,date_created:new Date(now).toISOString(),status:"authorized",auto_recurring:{currency_id:"BRL",transaction_amount:19.9,frequency:1,frequency_type:"months",free_trial:{frequency:7,frequency_type:"days"}}};
+assert.equal(confirmBinding(intent,sub,now).uid,auth.uid);
+assert.equal(intent.email,"test@example.com");
+assert.throws(()=>makeIntent({...auth,email_verified:false},offer,reference,now));
+assert.throws(()=>makeIntent(auth,{...offer,environment:"production"},reference,now));
+assert.throws(()=>makeIntent(auth,{...offer,enabled:false},reference,now));
+for(const patch of [{external_reference:"stolen"},{collector_id:99},{application_id:99},{payer_id:99},{preapproval_plan_id:"other"},{status:"pending"},{date_created:new Date(now+1000).toISOString()},{auto_recurring:{...sub.auto_recurring,transaction_amount:1}},{auto_recurring:{...sub.auto_recurring,free_trial:{frequency:1,frequency_type:"days"}}}])assert.throws(()=>confirmBinding(intent,{...sub,...patch},now));
+assert.throws(()=>confirmBinding({...intent,subscriptionId:"d".repeat(32)},sub,now));
+console.log("15 testes de vinculo individual aprovados");
