@@ -65,7 +65,7 @@ exports.betTestSubscription=onCall({region:"us-central1",secrets:[token,config],
  await checkProvider(cfg);
  let sub=await getSubscription(cfg);
  if(action==="cancel"&&!["cancelled","canceled"].includes(sub.status)){
-  await mp("/preapproval/"+encodeURIComponent(cfg.subscriptionId),{status:"canceled"});
+  await mp("/preapproval/"+encodeURIComponent(cfg.subscriptionId),{status:"cancelled"});
   sub=await getSubscription(cfg);
   if(!["cancelled","canceled"].includes(sub.status))throw new HttpsError("unavailable","Cancelamento ainda não confirmado. Consulte novamente.");
  }
@@ -153,7 +153,7 @@ exports.betTestCheckout=onCall({region:"us-central1",secrets:[token,config,check
    phase="entitlement-protection";protect(await db.collection("betEntitlements").doc(b.uid).get(),"mercadopago-test-individual");
    if(req.data?.confirm!==true)throw new HttpsError("invalid-argument","Confirme o cancelamento.");
    if(!["canceled","cancelled"].includes(sub.status)){
-    phase="cancel-request";await mp("/preapproval/"+encodeURIComponent(b.subscriptionId),{status:"canceled"});
+    phase="cancel-request";await mp("/preapproval/"+encodeURIComponent(b.subscriptionId),{status:"cancelled"});
     phase="cancel-readback";sub=await getSubscription(b);
     if(!["canceled","cancelled"].includes(sub.status))throw new HttpsError("unavailable","Cancelamento ainda não confirmado.");
    }
