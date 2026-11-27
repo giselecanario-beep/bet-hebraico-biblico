@@ -19,7 +19,7 @@ async function mp(path,body){
  const response=await fetch("https://api.mercadopago.com"+path,{
   method:body?"PUT":"GET",headers:{Authorization:"Bearer "+token.value(),...(body?{"Content-Type":"application/json"}:{})},
   ...(body?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(8000),redirect:"error"});
- if(!response.ok)throw new HttpsError("unavailable","Não foi possível confirmar os dados no Mercado Pago.");
+ if(!response.ok)throw new HttpsError("unavailable","Não foi possível confirmar os dados no Mercado Pago.",{providerHttp:response.status});
  return response.json();
 }
 function configuration(){
@@ -140,23 +140,32 @@ exports.betTestCheckout=onCall({region:"us-central1",secrets:[token,config,check
  if(auth.email_verified!==true)throw new HttpsError("failed-precondition","Confirme seu e-mail antes de contratar.");
  const db=getFirestore(),store=createCheckoutStore(db,{Timestamp,FieldValue}),provider=createTestProvider({token:token.value()});
  const service=createCheckoutService({store,provider,offer});
+ let phase="binding";
  try{
   if(action==="create")return await service.checkout(auth,{consent:req.data?.consent,consentVersion:req.data?.consentVersion,cardToken:req.data?.cardToken});
   if(action==="recover")return await service.recover(auth);
   if(!["status","cancel"].includes(action))throw new HttpsError("invalid-argument","Ação inválida.");
   const b=await individualBinding(offer);
   if(!b){const i=await store.read(auth.uid);return {state:i?.state||"none"};}
-  await checkProvider(b);
-  let sub=await getSubscription(b);
+  phase="seller";await checkProvider(b);
+  phase="subscription-read";let sub=await getSubscription(b);
   if(action==="cancel"){
-   protect(await db.collection("betEntitlements").doc(b.uid).get(),"mercadopago-test-individual");
+   phase="entitlement-protection";protect(await db.collection("betEntitlements").doc(b.uid).get(),"mercadopago-test-individual");
    if(req.data?.confirm!==true)throw new HttpsError("invalid-argument","Confirme o cancelamento.");
    if(!["canceled","cancelled"].includes(sub.status)){
-    await mp("/preapproval/"+encodeURIComponent(b.subscriptionId),{status:"canceled"});
-    sub=await getSubscription(b);
+    phase="cancel-request";await mp("/preapproval/"+encodeURIComponent(b.subscriptionId),{status:"canceled"});
+    phase="cancel-readback";sub=await getSubscription(b);
     if(!["canceled","cancelled"].includes(sub.status))throw new HttpsError("unavailable","Cancelamento ainda não confirmado.");
    }
   }
-  return {state:"bound",...await reconcile(b,sub,true)};
- }catch(e){if(e instanceof HttpsError)throw e;console.warn("BET checkout operation not confirmed");throw new HttpsError("failed-precondition","Não foi possível confirmar a operação. Consulte a assinatura antes de tentar novamente.");}
+  phase="reconcile";return {state:"bound",...await reconcile(b,sub,true)};
+ }catch(e){
+  if(action==="cancel"||action==="status"){
+   const http=e?.details?.providerHttp;
+   const details={phase,...(Number.isInteger(http)&&http>=400&&http<=599?{providerHttp:http}:{})};
+   console.warn("BET individual operation not confirmed",action,phase,details.providerHttp||"no-http");
+   throw new HttpsError(e instanceof HttpsError?e.code:"failed-precondition","Não foi possível confirmar a operação de teste.",details);
+  }
+  if(e instanceof HttpsError)throw e;console.warn("BET checkout operation not confirmed");throw new HttpsError("failed-precondition","Não foi possível confirmar a operação. Consulte a assinatura antes de tentar novamente.");
+ }
 });
