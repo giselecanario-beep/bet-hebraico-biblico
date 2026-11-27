@@ -10,10 +10,17 @@ const opts={region:'us-central1',secrets:[token],maxInstances:2};
 const back='https://bet-hebraico.web.app/';
 function uid(req){
  if(!req.auth||req.auth.uid!==tester.value()||!req.auth.token.email)throw new HttpsError('permission-denied','Acesso restrito ao teste BET.');
- if(!token.value().startsWith('TEST-'))throw new HttpsError('failed-precondition','Somente credencial de teste nesta versão.');
+ if(!/^(TEST-|APP_USR-)/.test(token.value()))throw new HttpsError('failed-precondition','Formato de credencial não reconhecido.');
  return req.auth.uid;
 }
 async function mp(path,method='GET',body){
+ // Prefix alone cannot distinguish test from production. Verify seller identity before any mutation.
+ if(method!=='GET'){
+  const who=await fetch('https://api.mercadolibre.com/users/me',{headers:{Authorization:'Bearer '+token.value()},signal:AbortSignal.timeout(15000)});
+  if(!who.ok)throw new HttpsError('failed-precondition','Não foi possível verificar a conta de teste.');
+  const seller=await who.json();
+  if(!Array.isArray(seller.tags)||!seller.tags.includes('test_user'))throw new HttpsError('failed-precondition','Conta de teste não confirmada pelo provedor; nenhuma operação enviada.');
+ }
  const r=await fetch('https://api.mercadopago.com'+path,{method,headers:{Authorization:'Bearer '+token.value(),'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined,signal:AbortSignal.timeout(15000)});
  if(!r.ok)throw new HttpsError('unavailable','Mercado Pago retornou HTTP '+r.status);
  return r.json();
