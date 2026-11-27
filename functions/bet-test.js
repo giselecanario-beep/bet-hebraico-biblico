@@ -92,8 +92,9 @@ exports.betTestWebhook=onRequest({region:"us-central1",secrets:[token,config,web
  if(req.method!=="POST"){res.status(405).end();return;}
  const ids=new URL(req.originalUrl||req.url,"https://bet.invalid").searchParams.getAll("data.id");
  const id=ids.length===1?ids[0]:undefined,type=req.body?.type;
- res.set("X-BET-Webhook","diagnostic-v2");
+ res.set("X-BET-Webhook","diagnostic-v3");
  const verdict=webhookVerdict({id,requestId:req.get("x-request-id"),signature:req.get("x-signature"),secret:webhookSecret.value(),now:Date.now()});
+ if(req.get("x-bet-diagnostic")==="1"&&type==="bet_diagnostic")res.set("X-BET-Diagnostic",verdict);
  if(verdict!=="ok"){console.warn("BET_WEBHOOK_DIAG "+verdict);res.status(401).end();return;}
  console.info("BET_WEBHOOK_DIAG signature-ok");
  if(String(req.body?.data?.id).toLowerCase()!==id.toLowerCase()){res.status(400).end();return;}
