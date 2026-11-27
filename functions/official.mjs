@@ -13,7 +13,7 @@ const ent=u=>db().collection('betEntitlements').doc(u);
 const claim=id=>db().collection('betOfficialClaims').doc(id);
 const now=()=>Date.now();
 const norm=e=>e.trim().toLowerCase();
-const managed=x=>!x||x.source==='mercado-pago-oficial';
+const managed=x=>!x||(x.source==='mercado-pago-oficial'&&!['owner','collaborator'].includes(x.role));
 const err=(code,msg)=>new HttpsError(code,msg);
 async function mp(path,method='GET',body){
  const r=await fetch('https://api.mercadopago.com'+path,{method,headers:{Authorization:'Bearer '+secret.value(),'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined,signal:AbortSignal.timeout(12000)});
@@ -90,7 +90,7 @@ async function work(uid,mode){
   const d=s?accessFor(s,previous,bills,now()):initial;
   const canCheckout=!d.active&&(!s||closed(s.status));
   const result={active:d.active,validUntil:d.validUntil,status:s?.status||'none',canCheckout,canCancel:!!s&&!closed(s.status),...(mode==='cancel'?{cancelConfirmed:true}:{}),...(mode==='start'&&canCheckout?{url:CHECKOUT}:{})};
-  const schedule=mode==='start'||!!s||prev.checkoutAt>now()-86400000;
+  const schedule=mode==='start'||(!!s&&(!closed(s.status)||d.active))||prev.checkoutAt>now()-86400000;
   await db().runTransaction(async tx=>{
    const [l,e]=await Promise.all([tx.get(ref),tx.get(ent(uid))]);
    if(l.data()?.lock!==key||!managed(e.data()))throw err('aborted','Conta alterada.');

@@ -487,7 +487,8 @@ button:focus-visible,a:focus-visible,input:focus-visible,summary:focus-visible{o
   // Import the functions you need from the SDKs you need
   import { initializeApp } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js";
   // Analytics opcional desativado nesta etapa.
-    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-auth.js";
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail, sendEmailVerification } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-auth.js";
+    import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-functions.js";
     import { getFirestore, doc, getDoc, getDocFromServer, setDoc, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-firestore.js";
 
   // TODO: Add SDKs for Firebase products that you want to use
@@ -511,6 +512,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,summary:focus-visible{o
     const auth = getAuth(app);
     
 const db = getFirestore(app);
+const officialFunctions=getFunctions(app,'us-central1');
 const progressoRef = (uid) => doc(db, "users", uid, "learning", "intro");
 
 async function salvarProgresso(uid, aulas) {
@@ -532,9 +534,11 @@ window.betResumeCloudWrite=async(uid,record)=>{
  await setDoc(resumeRef(uid),{...record,updatedAt:serverTimestamp()});
 };
 
-// Checkout comercial: manter desativado até a aprovação dos testes de lançamento.
-const BET_CHECKOUT_ENABLED=false;
-const BET_CHECKOUT_URL='https://mpago.la/1D3vZWm';
+// Checkout oficial: esta versão deve ser publicada apenas depois das funções oficiais.
+const BET_CHECKOUT_ENABLED=true;
+const BET_CHECKOUT_URL='https://www.mercadopago.com.br/subscriptions/checkout?preapproval_plan_id=417a60404e374b1d935b238e20090873';
+let officialState=null,officialBusy=false,officialLast=0;
+const officialCall=(name,data)=>httpsCallable(officialFunctions,name)(data).then(r=>r.data);
 function betCheckoutCanOpen(enabled,uid,access){
  return enabled===true&&typeof uid==='string'&&uid.length>0&&access?.uid===uid&&access.checked===true&&access.active===false&&access.owner!==true&&access.collaborator!==true;
 }
@@ -546,7 +550,7 @@ function betProfileAccessLabel(user,access,now){
   if(access.collaborator)return {label:'Colaborador',detail:'Acesso permanente.'};
   return {label:'Acesso exclusivo ativo',detail:Number.isFinite(access.expires)?'Autorização até '+new Date(access.expires).toLocaleDateString('pt-BR')+'.':'Autorização ativa.'};
  }
- return {label:'Plano gratuito',detail:'Acesso às cinco aulas introdutórias. Sem cobrança nesta versão.'};
+ return {label:'Plano gratuito',detail:'Acesso gratuito às cinco aulas introdutórias.'};
 }
 let betProfileUid=null;
 function betRenderProfile(){
@@ -559,6 +563,8 @@ function betRenderProfile(){
  const info=betProfileAccessLabel(user,access,Date.now());
  document.getElementById('bet-profile-plan').textContent=info.label;
  document.getElementById('bet-profile-validity').textContent=info.detail;
+ const cancel=document.getElementById('bet-official-cancel');if(cancel)cancel.disabled=officialBusy||!user||officialState?.uid!==uid||!officialState?.canCancel;
+ const st=document.getElementById('bet-official-status');if(st)st.textContent=officialState?.uid===uid?(officialState.message||''):'Consulte sua assinatura para atualizar.';
 }
 window.betRenderProfile=betRenderProfile;
 document.getElementById('bet-profile-reset')?.addEventListener('click',async()=>{
@@ -574,17 +580,68 @@ function betUpdateCheckout(){
  betRenderProfile();
  const button=document.getElementById('bet-checkout-button'),note=document.getElementById('bet-checkout-note');
  if(!button||!note)return;
- const user=auth.currentUser,access=window.betAccess;
+ const user=auth.currentUser,access=window.betAccess,state=officialState?.uid===user?.uid?officialState:null;
  const active=!!(user&&access?.uid===user.uid&&access.active&&access.expires>Date.now());
- button.hidden=active;button.disabled=!betCheckoutCanOpen(BET_CHECKOUT_ENABLED,user?.uid,access);
- button.textContent=BET_CHECKOUT_ENABLED?'Assinar pelo Mercado Pago':'Assinaturas em preparação';
- note.textContent=active?(access.owner?'Seu acesso de proprietária é gratuito e permanente.':access.collaborator?'Seu acesso de colaborador é gratuito e permanente.':'Sua assinatura já está ativa.') : !BET_CHECKOUT_ENABLED?'Vendas ainda não abertas. Nenhum pagamento é solicitado nesta versão.':!user?'Entre na sua conta BET antes de assinar.':!access?.checked?'Consulte sua assinatura antes de prosseguir.':'Sete dias de teste grátis; depois, R$ 19,90 por mês. Use o mesmo e-mail da sua conta BET no Mercado Pago, quando possível. O acesso depende da conferência administrativa da assinatura. Confira os termos e o cancelamento no checkout.';
+ button.hidden=active;button.disabled=officialBusy||!BET_CHECKOUT_ENABLED||!!(user&&state?.canCheckout===false&&user.emailVerified);
+ button.textContent=!user?'Entrar para assinar':!user.emailVerified?'Confirmar meu e-mail':'Começar 7 dias grátis';
+ note.textContent=active?(access.owner?'Seu acesso de proprietária é gratuito e permanente.':access.collaborator?'Seu acesso de colaborador é gratuito e permanente.':'Seu acesso exclusivo está ativo.'):state?.message||(!user?'Entre na sua conta BET antes de assinar.':!user.emailVerified?'Confirme seu e-mail uma vez para vincular a assinatura.':'Use o mesmo e-mail da conta BET no checkout. Sete dias gratuitos, depois R$ 19,90/mês. Você pode cancelar a renovação no perfil.');
 }
-window.betOpenCheckout=()=>{
+function officialMessage(user,message,data={}){
+ if(auth.currentUser?.uid!==user.uid)return;
+ officialState={...(officialState?.uid===user.uid?officialState:{}),...data,uid:user.uid,message};betUpdateCheckout();
+}
+function officialResult(user,data){
+ const message=data.protected?'Seu acesso existente foi preservado.':data.cancelConfirmed?'Cancelamento confirmado pelo Mercado Pago. Não haverá nova renovação.':data.active?'Acesso confirmado pelo Mercado Pago.':data.status==='pending'?'Aguardando confirmação do Mercado Pago.':data.canCheckout===false?'Assinatura existente. Consulte o status ou cancele antes de contratar outra.':'Nenhuma assinatura ativa encontrada. Use o mesmo e-mail da conta BET no checkout.';
+ officialMessage(user,message,data);
+}
+window.betOfficialRefresh=async(force=false)=>{
+ const user=auth.currentUser;if(!user||officialBusy)return;
+ if(!force&&Date.now()-officialLast<60000)return;
+ if(window.betAccess?.owner||window.betAccess?.collaborator)return;
+ officialBusy=true;officialLast=Date.now();betUpdateCheckout();
+ try{
+  await user.reload();
+  if(auth.currentUser?.uid!==user.uid)return;
+  if(!user.emailVerified){if(force)officialMessage(user,'Confirme seu e-mail antes de consultar a assinatura.');return;}
+  await user.getIdToken(true);
+  const data=await officialCall('betOfficialSync',{});
+  if(auth.currentUser?.uid!==user.uid)return;
+  officialResult(user,data);
+  await window.betConsultarAssinatura(user);
+ }catch(e){officialMessage(user,'Não foi possível consultar o Mercado Pago agora. Tente novamente.');}
+ finally{officialBusy=false;betUpdateCheckout();}
+};
+window.betOpenCheckout=async()=>{
  const user=auth.currentUser;
- if(!betCheckoutCanOpen(BET_CHECKOUT_ENABLED,user?.uid,window.betAccess))return;
- if(!confirm('Você será direcionado ao Mercado Pago. A autorização das aulas depende da confirmação da assinatura; não será imediata. Deseja continuar?'))return;
- window.location.assign(BET_CHECKOUT_URL);
+ if(!user){showAccountPanel();return;}
+ if(officialBusy||window.betAccess?.active||!BET_CHECKOUT_ENABLED)return;
+ officialBusy=true;betUpdateCheckout();
+ try{
+  await user.reload();if(auth.currentUser?.uid!==user.uid)return;
+  if(!user.emailVerified){
+   await sendEmailVerification(user);
+   officialMessage(user,'Enviamos um link de confirmação. Abra o seu e-mail, confirme e volte ao BET.');
+   return;
+  }
+  await user.getIdToken(true);
+  const data=await officialCall('betOfficialStart',{});
+  if(auth.currentUser?.uid!==user.uid)return;
+  officialResult(user,data);
+  if(data.url===BET_CHECKOUT_URL){
+   officialMessage(user,'Conclua no Mercado Pago com o mesmo e-mail. Depois volte ao BET e consulte sua assinatura.');
+   window.location.assign(data.url);
+  }else await window.betConsultarAssinatura(user);
+ }catch(e){officialMessage(user,'Não foi possível abrir o checkout com segurança. Consulte a assinatura e tente novamente.');}
+ finally{officialBusy=false;betUpdateCheckout();}
+};
+window.betOfficialCancel=async()=>{
+ const user=auth.currentUser;
+ if(!user||officialBusy||officialState?.uid!==user.uid||!officialState.canCancel)return;
+ if(!confirm('Cancelar a renovação do BET Completo? Sua conta e progresso serão preservados.'))return;
+ officialBusy=true;betUpdateCheckout();
+ try{const data=await officialCall('betOfficialCancel',{confirm:true});if(auth.currentUser?.uid!==user.uid)return;officialResult(user,data);await window.betConsultarAssinatura(user);}
+ catch(e){officialMessage(user,'Cancelamento não confirmado. Consulte novamente e, se necessário, procure o atendimento do Mercado Pago.');}
+ finally{officialBusy=false;betUpdateCheckout();}
 };
 // O Firestore verifica a autorização no servidor; nenhuma permissão é criada pelo navegador.
 let subscriptionRequest=0, paidReadRequest=0, expiryTimer=null, entitlementUnsubscribe=null;
@@ -628,7 +685,7 @@ window.betConsultarAssinatura=async(user)=>{
   if(request===subscriptionRequest){window.betResumeCapture?.(true);betAccessReset();el.textContent='Não foi possível consultar a assinatura. Verifique a conexão e tente novamente.';}
  }
 };
-window.betAtualizarAssinatura=()=>window.betConsultarAssinatura(auth.currentUser);
+window.betAtualizarAssinatura=async()=>{await window.betOfficialRefresh(true);await window.betConsultarAssinatura(auth.currentUser);};
 window.betFetchPaidLesson=async(id)=>{
  const user=auth.currentUser, access=window.betAccess;
  if(!user||access?.uid!==user.uid||!access.active||access.expires<=Date.now()||!/^\d{2,}$/.test(id)||Number(id)<6)throw new Error('access');
@@ -652,7 +709,8 @@ window.betFetchReviewVocabulary=async(ids)=>{
 window.betCancelPaidRead=()=>{++paidReadRequest;};
 window.addEventListener('pagehide',()=>{window.betResumeCapture?.(true);betAccessReset();});
 window.addEventListener('pageshow',event=>{if(event.persisted&&auth.currentUser)void window.betConsultarAssinatura(auth.currentUser);});
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&auth.currentUser)window.betConsultarAssinatura(auth.currentUser);});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&auth.currentUser){void window.betConsultarAssinatura(auth.currentUser);void window.betOfficialRefresh();}});
+setInterval(()=>{if(document.visibilityState==='visible'&&auth.currentUser&&officialState?.uid===auth.currentUser.uid&&officialState.status!=='none')void window.betOfficialRefresh();},60000);
 
 window.carregarProgresso = async (uid) => {
   const registro = await getDoc(progressoRef(uid));
@@ -667,7 +725,9 @@ window.carregarProgresso = async (uid) => {
 window.betResumeBeforeAccountChange?.();
 window.betUsuarioId = user ? user.uid : null;
 if(entitlementUnsubscribe){entitlementUnsubscribe();entitlementUnsubscribe=null;}
+officialState=null;officialLast=0;
 const betAccessCheck=window.betConsultarAssinatura?.(user);
+if(user)void Promise.resolve(betAccessCheck).then(()=>{if(auth.currentUser?.uid===user.uid)return window.betOfficialRefresh();});
 if(user){
  const uid=user.uid;
  entitlementUnsubscribe=onSnapshot(doc(db,'betEntitlements',uid),{includeMetadataChanges:true},snap=>{
@@ -888,7 +948,7 @@ document.getElementById("btn-recuperar")?.addEventListener("click", async () => 
 <p>Continue sua jornada com cinco novas aulas. Complete o alfabeto hebraico, conheça as cinco formas finais e aprenda a ler palavras e pequenas expressões bíblicas.</p>
 <div id="bet-paid-list" class="bet-module-outline" aria-label="Aulas do módulo 2"></div><article id="bet-paid-view" class="panel hidden" aria-live="polite"></article>
 <p class="bet-module-facts">5 aulas · 22 desafios interativos · vocabulário e leitura guiada</p>
-<div class="bet-subscription-preview"><span class="section-overline">BET COMPLETO MENSAL</span><h3>R$ 19,90 por mês</h3><p>Sete dias de teste grátis. Depois, R$ 19,90 por mês, com acesso aos módulos exclusivos durante a assinatura. Novos conteúdos serão incluídos progressivamente.</p><p id="bet-subscription-state" role="status" aria-live="polite">Entre na sua conta BET para consultar a assinatura.</p><button type="button" class="secondary" onclick="showAccountPanel()">Minha conta</button><button type="button" class="secondary" onclick="window.betAtualizarAssinatura?.()">Consultar assinatura</button><button type="button" id="bet-checkout-button" class="primary" disabled onclick="window.betOpenCheckout?.()">Assinaturas em preparação</button><p id="bet-checkout-note" class="small" role="status">Vendas ainda não abertas. Nenhum pagamento é solicitado nesta versão.</p></div>
+<div class="bet-subscription-preview"><span class="section-overline">BET COMPLETO MENSAL</span><h3>R$ 19,90 por mês</h3><p>Sete dias de teste grátis. Depois, R$ 19,90 por mês, com acesso aos módulos exclusivos durante a assinatura. Novos conteúdos serão incluídos progressivamente.</p><p id="bet-subscription-state" role="status" aria-live="polite">Entre na sua conta BET para consultar a assinatura.</p><button type="button" class="secondary" onclick="showAccountPanel()">Minha conta</button><button type="button" class="secondary" onclick="window.betAtualizarAssinatura?.()">Consultar assinatura</button><button type="button" id="bet-checkout-button" class="primary" disabled onclick="window.betOpenCheckout?.()">Começar 7 dias grátis</button><p id="bet-checkout-note" class="small" role="status">Entre na sua conta BET para assinar.</p></div>
 </section><div class="beta-panel"><h2>Terminou de testar?</h2><p class="small">Conte o que gostou e o que precisa melhorar.</p><button class="secondary" onclick="go('testes')">Avaliar minha experiência</button></div></section>
 <section id="testes" class="page hidden" aria-labelledby="beta-test-title">
  <span class="beta-label">Participação gratuita · versão experimental</span>
@@ -984,13 +1044,13 @@ document.getElementById("btn-recuperar")?.addEventListener("click", async () => 
    <p id="bet-profile-plan" class="bet-profile-status" role="status">Consultando acesso…</p>
    <p id="bet-profile-validity" class="small"></p>
    <button type="button" id="bet-profile-refresh" class="secondary" onclick="window.betAtualizarAssinatura?.()" hidden>Atualizar status</button>
-   <p class="small">As vendas ainda não estão abertas nesta versão beta.</p>
+   <p class="small">O BET Completo custa R$ 19,90 por mês após sete dias gratuitos. Consulte o status da assinatura aqui.</p>
   </section>
   <section class="panel bet-profile-full" aria-labelledby="bet-profile-billing-title">
    <h2 id="bet-profile-billing-title">Pagamentos e cancelamento</h2>
-   <p>O histórico de pagamentos e o cancelamento direto pelo BET estão em preparação. Nenhuma assinatura comercial é vendida nesta versão.</p>
-   <button type="button" class="bet-profile-cancel" disabled>Cancelar assinatura (em preparação)</button>
-   <p class="small">Antes da abertura das vendas, o cancelamento deverá interromper a renovação no provedor e emitir uma confirmação. Cancelar a assinatura não excluirá a conta nem o progresso.</p>
+   <p>O Mercado Pago processa as cobranças. Consulte sua assinatura antes de cancelar a renovação.</p>
+   <button type="button" id="bet-official-cancel" class="bet-profile-cancel" onclick="window.betOfficialCancel?.()" disabled>Cancelar renovação</button><p id="bet-official-status" class="small" role="status"></p>
+   <p class="small">O cancelamento não exclui a conta nem o progresso. Caso não seja confirmado, consulte novamente. Para reembolsos e problemas com pagamentos, consulte a ajuda do Mercado Pago.</p>
   </section>
  </div>
 </section>

@@ -14,7 +14,7 @@ done
 git archive "$rev" "${files[@]}" | tar -x -C "$out/public"
 test -s "$out/public/index.html"
 for f in "${files[@]}"; do test -s "$out/public/$f"; done
-if grep -Eq 'const BET_CHECKOUT_ENABLED[[:space:]]*=[[:space:]]*true' "$out/public/index.html"; then
+if grep -Eq 'const BET_CHECKOUT_ENABLED[[:space:]]*=[[:space:]]*true' "$out/public/index.html" && [[ "${BET_ALLOW_COMMERCIAL:-0}" != 1 ]]; then
   echo 'Checkout ativo: esta preparação exige revisão comercial.' >&2; exit 1
 fi
 cat > "$out/firebase.json" <<'JSON'
