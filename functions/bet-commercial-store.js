@@ -49,7 +49,7 @@ function createCommercialStore(db,{Timestamp,FieldValue}){
   return b;
  }
  async function reconcile(i,b,access,sub,now){
-  await db.runTransaction(async tx=>{
+  return db.runTransaction(async tx=>{
    const refs=[uidRef(i.uid),emailRef(i),refRef(i),payerRef(b),subRef(b),entRef(i.uid)];
    const [u,e,r,p,s,a]=await Promise.all(refs.map(x=>tx.get(x)));
    if(![u,e,r,p,s].every(x=>owns(x,i)&&x.data().subscriptionId===b.subscriptionId)||!a.exists||a.data().source!=="mercadopago-commercial"||a.data().subscriptionId!==b.subscriptionId||a.data().role!=="subscriber")throw Error("protected-entitlement");
