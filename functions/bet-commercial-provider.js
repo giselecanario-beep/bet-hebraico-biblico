@@ -55,6 +55,10 @@ function createCommercialProvider({token,offer,fetchImpl=fetch}){
   if(!/^\d{1,25}$/.test(String(id)))throw Error("invalid-payment-id");
   return request("GET","/v1/payments/"+encodeURIComponent(String(id)));
  }
- return {verifySeller,verifyOffer,findByEmail,create,get,cancel,invoices,payment};
+ async function invoice(id){
+  if(!/^\d{1,25}$/.test(String(id)))throw Error("invalid-invoice-id");
+  return request("GET","/authorized_payments/"+encodeURIComponent(String(id)));
+ }
+ return {verifySeller,verifyOffer,findByEmail,create,get,cancel,invoices,payment,invoice};
 }
 module.exports={createCommercialProvider};
