@@ -67,6 +67,10 @@ function fixture(){
  assert.equal(f.subscriptions[1].status,"authorized");
  assert.equal((await f.svc.cancel(a,{confirm:true})).cancelled,true);
  assert.equal(f.data.get("betEntitlements/"+a.uid).active,false);
+ assert.equal((await f.svc.reconcileEvent(f.subscriptions[0].id)).active,false);
+ assert.equal((await f.svc.reconcileEvent(f.subscriptions[1].id)).active,true);
+ assert.equal((await f.svc.reconcileEvent(f.subscriptions[1].id)).active,true);
+ assert.equal(f.posts,2);
  await assert.rejects(()=>f.svc.checkout({...a,uid:"other_student_123"},input),/existing-provider-subscription/);
  await assert.rejects(()=>f.svc.recover({...a,email:b.email}),/intent-mismatch/);
  const i=await f.store.read(a.uid),s=f.subscriptions[0];
@@ -74,6 +78,7 @@ function fixture(){
  f=fixture();f.fail();
  assert.equal((await f.svc.checkout(a,input)).state,"uncertain");
  assert.equal(f.posts,1);
+ assert.equal((await f.svc.reconcileEvent(f.subscriptions[0].id)).state,"bound");
  assert.equal((await f.svc.recover(a)).state,"bound");
  assert.equal(f.posts,1);
  f=fixture();f.data.set("betEntitlements/"+a.uid,{role:"owner",source:"manual"});
